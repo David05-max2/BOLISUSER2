@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bolis Control Online</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#166534;--red:#b91c1c;--blue:#1d4ed8}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}.authbox{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:0 20px 50px #00000012}
+.logo{font-size:28px;font-weight:900}.logo small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:3px}.auth h2{margin:24px 0 8px}
+label{display:block;font-size:13px;color:#4b5563;margin:12px 0 6px}input,select{width:100%;padding:11px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff}
+.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700}.primary{background:var(--dark);color:#fff}.secondary{background:#fff;border:1px solid #d1d5db}.danger{background:#fff;color:var(--red);border:1px solid #fecaca}.link{border:0;background:transparent;color:var(--blue);padding:0}
+.full{width:100%;margin-top:14px}.msg{padding:12px;border-radius:10px;margin-top:12px;font-size:14px}.ok{background:#f0fdf4;color:var(--green)}.err{background:#fef2f2;color:var(--red)}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.side{background:var(--dark);color:#fff;padding:20px 14px}.side .logo{font-size:21px;margin:0 8px 20px}.nav button{width:100%;text-align:left;border:0;background:transparent;color:#d1d5db;padding:11px 12px;border-radius:9px;margin:2px 0}.nav button.active,.nav button:hover{background:#1f2937;color:#fff}.userbox{margin-top:25px;padding:12px;border-top:1px solid #374151;font-size:12px;color:#cbd5e1}
+main{padding:26px}.section{display:none}.section.active{display:block}h1{margin:0 0 5px}.sub{color:var(--muted);margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:0 2px 8px #00000008}.kpi{font-size:28px;font-weight:900;margin-top:6px}.small{font-size:13px;color:var(--muted)}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#f9fafb}
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.show{display:flex}.modalbox{background:#fff;border-radius:16px;width:min(900px,100%);max-height:90vh;overflow:auto;padding:20px}
+.recipe-row,.extra-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:9px;align-items:end;padding:9px 0;border-bottom:1px solid var(--line)}
+.bad{color:var(--red);font-weight:700}.good{color:var(--green);font-weight:700}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{position:sticky;top:0;z-index:10;padding:10px}.side .logo{margin:2px 8px 8px}.nav{display:flex;overflow:auto}.nav button{width:auto;white-space:nowrap}.userbox{display:none}.grid,.formgrid{grid-template-columns:1fr 1fr}main{padding:16px}}
+@media(max-width:600px){.grid,.formgrid{grid-template-columns:1fr}.recipe-row,.extra-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div id="authView" class="auth">
+  <div class="authbox">
+    <div class="logo">🍦 Bolis Control <small>Online · Supabase</small></div>
+
+    <div id="loginPanel">
+      <h2>Iniciar sesión</h2>
+      <div class="small">Usa el correo y contraseña que creaste en Supabase.</div>
+      <label>Correo</label><input id="loginEmail" type="email" autocomplete="email">
+      <label>Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password">
+      <button class="btn primary full" onclick="login()">INICIAR SESIÓN</button>
+      <div style="margin-top:14px"><button class="link" onclick="showReset()">¿Olvidaste tu contraseña?</button></div>
+      <div id="loginMsg"></div>
+    </div>
+
+    <div id="resetPanel" class="hidden">
+      <h2>Recuperar contraseña</h2>
+      <div class="small">Te enviaremos un enlace a tu correo.</div>
+      <label>Correo</label><input id="resetEmail" type="email">
+      <button class="btn primary full" onclick="sendReset()">ENVIAR ENLACE</button>
+      <div style="margin-top:14px"><button class="link" onclick="showLogin()">Volver al inicio</button></div>
+      <div id="resetMsg"></div>
+    </div>
+
+    <div id="newPasswordPanel" class="hidden">
+      <h2>Nueva contraseña</h2>
+      <label>Nueva contraseña</label><input id="newPassword" type="password">
+      <button class="btn primary full" onclick="updatePassword()">GUARDAR CONTRASEÑA</button>
+      <div id="passwordMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="appView" class="app hidden">
+  <aside class="side">
+    <div class="logo">🍦 Bolis Control</div>
+    <div class="nav">
+      <button class="active" data-section="inicio">Inicio</button>
+      <button data-section="productos">Productos</button>
+      <button data-section="inventario">Inventario</button>
+      <button data-section="recetas">Recetas</button>
+      <button data-section="produccion">Producción</button>
+      <button data-section="bolis">Inventario de bolis</button>
+      <button data-section="respaldo">Respaldo</button>
+    </div>
+    <div class="userbox"><div id="userEmail"></div><button class="link" style="color:#fff;margin-top:10px" onclick="logout()">Cerrar sesión</button></div>
+  </aside>
+
+  <main>
+    <section id="inicio" class="section active">
+      <h1>Panel principal</h1><div class="sub">Tus datos están sincronizados con Supabase.</div>
+      <div class="grid">
+        <div class="card"><div class="small">Productos</div><div class="kpi" id="kProducts">0</div></div>
+        <div class="card"><div class="small">Valor del inventario</div><div class="kpi" id="kInventory">$0</div></div>
+        <div class="card"><div class="small">Recetas</div><div class="kpi" id="kRecipes">0</div></div>
+        <div class="card"><div class="small">Bolis disponibles</div><div class="kpi" id="kBolis">0</div></div>
+      </div>
+    </section>
+
+    <section id="productos" class="section">
+      <h1>Productos</h1><div class="sub">Materias primas de tu cuenta.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openNewProduct()">+ Nuevo producto</button></div>
+      <table><thead><tr><th>Producto</th><th>Unidad</th><th>Existencia</th><th>Costo promedio</th><th>Valor</th><th></th></tr></thead><tbody id="productsBody"></tbody></table>
+    </section>
+
+    <section id="inventario" class="section">
+      <h1>Inventario</h1><div class="sub">Compras, daños, pérdidas y ajustes.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openPurchase()">+ Registrar compra</button><button class="btn secondary" onclick="openAdjustment()">Daño / pérdida / ajuste</button></div>
+      <table><thead><tr><th>Producto</th><th>Existencia</th><th>Costo promedio</th><th>Valor</th></tr></thead><tbody id="inventoryBody"></tbody></table>
+      <h3>Últimos movimientos</h3>
+      <table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Valor</th></tr></thead><tbody id="movementBody"></tbody></table>
+    </section>
+
+    <section id="recetas" class="section">
+      <h1>Recetas</h1><div class="sub">Recetas del sistema y recetas creadas por ti.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openRecipeCreator(true)">+ Desde Base Gourmet</button><button class="btn secondary" onclick="openRecipeCreator(false)">+ Desde cero</button></div>
+      <select id="recipeList" onchange="renderRecipeDetail()"></select>
+      <div class="card" id="recipeDetail" style="margin-top:14px"></div>
+    </section>
+
+    <section id="produccion" class="section">
+      <h1>Producción</h1><div class="sub">Calcula por lotes, usa rendimiento real y agrega toppings o rellenos.</div>
+      <div class="card">
+        <div class="formgrid">
+          <div><label>Receta</label><select id="prodRecipe" onchange="productionChanged()"></select></div>
+          <div><label>Lotes</label><input id="prodLots" type="number" min="1" value="1" oninput="calculateProduction()"></div>
+          <div><label>Sugeridos</label><input id="prodSuggested" disabled></div>
+          <div><label>Bolis reales</label><input id="prodActual" type="number" min="1" oninput="calculateProduction()"></div>
+        </div>
+        <div class="toolbar"><button class="btn secondary" onclick="addExtra()">+ Topping / relleno</button></div>
+        <div id="extrasBox"></div>
+        <div id="productionCalc"></div>
+        <div class="toolbar"><button class="btn primary" onclick="saveProduction()">GUARDAR PRODUCCIÓN</button></div>
+      </div>
+    </section>
+
+    <section id="bolis" class="section">
+      <h1>Inventario de bolis</h1><div class="sub">Existencias terminadas y producción organizada por mes.</div>
+      <div class="formgrid">
+        <div><label>Mes</label><select id="monthFilter" onchange="renderFinished()"></select></div>
+        <div><label>Año</label><select id="yearFilter" onchange="renderFinished()"></select></div>
+      </div>
+      <h3>Inventario actual</h3>
+      <table><thead><tr><th>Sabor</th><th>Cantidad</th></tr></thead><tbody id="finishedBody"></tbody></table>
+      <h3>Producciones del mes</h3>
+      <table><thead><tr><th>Fecha</th><th>Receta</th><th>Lotes</th><th>Sugeridos</th><th>Reales</th><th>Costo</th></tr></thead><tbody id="productionHistory"></tbody></table>
+    </section>
+
+    <section id="respaldo" class="section">
+      <h1>Respaldo</h1><div class="sub">Aunque los datos están en la nube, puedes descargar una copia JSON.</div>
+      <div class="card"><button class="btn primary" onclick="exportCloudBackup()">Exportar respaldo completo</button><div id="backupMsg"></div></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="modal"><div id="modalBox" class="modalbox"></div></div>
+
+<script>
+const SUPABASE_URL='https://qlwcxovrdglmmvprddvj.supabase.co';
+const SUPABASE_KEY='sb_publishable_TCNsMstb0cJiHGtxXF6kdA_gc05Hr8k';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let session=null,user=null;
+let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[];
+let extras=[],recipeDraft=null;
+
+const COP=n=>'$'+Math.round(Number(n||0)).toLocaleString('es-CO');
+const fmt=n=>Number(n||0).toLocaleString('es-CO',{maximumFractionDigits:2});
+const dt=s=>s?new Date(s).toLocaleString('es-CO'):'';
+const invByProduct=id=>inventory.find(i=>i.product_id===id);
+const productById=id=>products.find(p=>p.id===id);
+const productByLegacy=k=>products.find(p=>p.legacy_key===k);
+const recipeById=id=>recipes.find(r=>r.id===id);
+const msg=(el,text,ok=true)=>el.innerHTML=`<div class="msg ${ok?'ok':'err'}">${text}</div>`;
+
+async function init(){
+ const {data:{session:s}}=await sb.auth.getSession();
+ session=s; user=s?.user||null;
+ sb.auth.onAuthStateChange(async(event,sess)=>{
+   session=sess; user=sess?.user||null;
+   if(event==='PASSWORD_RECOVERY'){showNewPassword();return}
+   if(user) await enterApp(); else showAuth();
+ });
+ if(user) await enterApp(); else showAuth();
+
+ if(location.hash.includes('type=recovery')) showNewPassword();
+}
+function showAuth(){authView.classList.remove('hidden');appView.classList.add('hidden')}
+function showLogin(){loginPanel.classList.remove('hidden');resetPanel.classList.add('hidden');newPasswordPanel.classList.add('hidden')}
+function showReset(){loginPanel.classList.add('hidden');resetPanel.classList.remove('hidden');newPasswordPanel.classList.add('hidden')}
+function showNewPassword(){authView.classList.remove('hidden');appView.classList.add('hidden');loginPanel.classList.add('hidden');resetPanel.classList.add('hidden');newPasswordPanel.classList.remove('hidden')}
+async function login(){
+ loginMsg.innerHTML='';
+ const {error}=await sb.auth.signInWithPassword({email:loginEmail.value.trim(),password:loginPassword.value});
+ if(error)return msg(loginMsg,error.message,false);
+}
+async function logout(){await sb.auth.signOut()}
+async function sendReset(){
+ const email=resetEmail.value.trim(); if(!email)return msg(resetMsg,'Escribe tu correo.',false);
+ const redirectTo=location.origin+location.pathname;
+ const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+ if(error)return msg(resetMsg,error.message,false);
+ msg(resetMsg,'Correo enviado. Revisa tu bandeja y abre el enlace de recuperación.');
+}
+async function updatePassword(){
+ if(newPassword.value.length<6)return msg(passwordMsg,'Usa al menos 6 caracteres.',false);
+ const {error}=await sb.auth.updateUser({password:newPassword.value});
+ if(error)return msg(passwordMsg,error.message,false);
+ msg(passwordMsg,'Contraseña actualizada.'); setTimeout(()=>enterApp(),800);
+}
+async function enterApp(){
+ authView.classList.add('hidden'); appView.classList.remove('hidden'); userEmail.textContent=user.email||'';
+ await loadAll();
+}
+
+async function loadAll(){
+ const [p,i,r,ri,m,pr,f]=await Promise.all([
+   sb.from('products').select('*').eq('activo',true).order('nombre'),
+   sb.from('inventory').select('*'),
+   sb.from('recipes').select('*').eq('activo',true).order('nombre'),
+   sb.from('recipe_ingredients').select('*').order('created_at'),
+   sb.from('inventory_movements').select('*').order('fecha',{ascending:false}).limit(100),
+   sb.from('productions').select('*').order('fecha',{ascending:false}),
+   sb.from('finished_inventory').select('*').order('nombre_sabor')
+ ]);
+ for(const x of [p,i,r,ri,m,pr,f]) if(x.error){alert(x.error.message);return}
+ products=p.data||[];inventory=i.data||[];recipes=r.data||[];recipeIngredients=ri.data||[];
+ movements=m.data||[];productions=pr.data||[];finished=f.data||[];
+ renderAll();
+}
+function renderAll(){
+ kProducts.textContent=products.length;
+ kInventory.textContent=COP(inventory.reduce((s,i)=>s+Number(i.cantidad)*Number(i.costo_promedio),0));
+ kRecipes.textContent=recipes.length;
+ kBolis.textContent=finished.reduce((s,f)=>s+Number(f.cantidad),0);
+
+ productsBody.innerHTML=products.map(p=>{const i=invByProduct(p.id)||{cantidad:0,costo_promedio:0};return `<tr><td>${p.nombre}</td><td>${p.unidad_base}</td><td>${fmt(i.cantidad)} ${p.unidad_base}</td><td>${COP(i.costo_promedio)}/${p.unidad_base}</td><td>${COP(Number(i.cantidad)*Number(i.costo_promedio))}</td><td><button class="btn danger" onclick="deleteProduct('${p.id}')">Eliminar</button></td></tr>`}).join('');
+ inventoryBody.innerHTML=productsBody.innerHTML.replace(/<td><button[\s\S]*?<\/button><\/td>/g,'');
+ movementBody.innerHTML=movements.slice(0,30).map(m=>`<tr><td>${dt(m.fecha)}</td><td>${productById(m.product_id)?.nombre||''}</td><td>${m.tipo}</td><td>${fmt(m.cantidad)} ${m.unidad||''}</td><td>${COP(m.valor)}</td></tr>`).join('');
+
+ const opts=recipes.map(r=>`<option value="${r.id}">${r.nombre}${r.es_sistema?'':' · Propia'}</option>`).join('');
+ recipeList.innerHTML=opts;prodRecipe.innerHTML=opts;
+ renderRecipeDetail();productionChanged();setupDateFilters();renderFinished();renderExtras();
+}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById(b.dataset.section).classList.add('active');
+});
+
+function showModal(h){modalBox.innerHTML=h;modal.classList.add('show')}
+function closeModal(){modal.classList.remove('show')}
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+function productOptions(selected=''){return products.map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${p.nombre}</option>`).join('')}
+function measures(p){
+ if(p.unidad_base==='g')return '<option value="g">g</option><option value="kg">kg</option><option value="lb">lb</option>';
+ if(p.unidad_base==='ml')return '<option value="ml">ml</option><option value="L">litros</option>';
+ return '<option value="unidad">unidad</option>';
+}
+function toBase(v,u,base){v=Number(v||0);if(base==='g'){if(u==='kg')return v*1000;if(u==='lb')return v*453.59237}if(base==='ml'&&u==='L')return v*1000;return v}
+
+function openNewProduct(){
+ showModal(`<h2>Nuevo producto</h2><div class="formgrid"><div><label>Nombre</label><input id="npName"></div><div><label>Unidad base</label><select id="npUnit"><option value="g">gramos</option><option value="ml">mililitros</option><option value="unidad">unidad</option></select></div></div><div class="toolbar"><button class="btn primary" onclick="saveNewProduct()">Guardar</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function saveNewProduct(){
+ const name=npName.value.trim();if(!name)return;
+ const {data,error}=await sb.from('products').insert({user_id:user.id,nombre:name,unidad_base:npUnit.value}).select().single();
+ if(error)return alert(error.message);
+ await sb.from('inventory').insert({user_id:user.id,product_id:data.id,cantidad:0,costo_promedio:0});
+ closeModal();await loadAll();
+}
+async function deleteProduct(id){
+ if(!confirm('¿Seguro que quieres eliminar este producto?'))return;
+ const {error}=await sb.from('products').delete().eq('id',id);
+ if(error)return alert(error.message);await loadAll();
+}
+
+function openPurchase(){
+ showModal(`<h2>Registrar compra</h2><div class="formgrid">
+ <div><label>Producto</label><select id="buyProduct" onchange="purchaseProductChanged()">${productOptions()}</select></div>
+ <div><label>Cuántas unidades compraste</label><input id="buyCount" type="number" min="0" step=".01" value="1" oninput="purchasePreview()"></div>
+ <div><label>Cuánto trae cada unidad</label><input id="buyContent" type="number" min="0" step=".01" value="1" oninput="purchasePreview()"></div>
+ <div><label>Medida</label><select id="buyMeasure" onchange="purchasePreview()"></select></div>
+ <div><label>Precio por unidad comprada (COP)</label><input id="buyPrice" type="number" min="0" oninput="purchasePreview()"></div>
+ <div><label>Nota</label><input id="buyNote"></div></div><div id="buyPreview" class="msg ok"></div>
+ <div class="toolbar"><button class="btn primary" onclick="savePurchase()">Guardar compra</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+ purchaseProductChanged();
+}
+function purchaseProductChanged(){const p=productById(buyProduct.value);buyMeasure.innerHTML=measures(p);purchasePreview()}
+function purchasePreview(){
+ const p=productById(buyProduct.value);if(!p)return;
+ const count=Number(buyCount.value||0),base=toBase(Number(buyContent.value||0),buyMeasure.value,p.unidad_base),enter=count*base,paid=count*Number(buyPrice.value||0);
+ const old=invByProduct(p.id)||{cantidad:0,costo_promedio:0};const newAvg=(Number(old.cantidad)+enter)?((Number(old.cantidad)*Number(old.costo_promedio))+paid)/(Number(old.cantidad)+enter):0;
+ buyPreview.innerHTML=`Entrará <b>${fmt(enter)} ${p.unidad_base}</b> · Total <b>${COP(paid)}</b> · Nuevo promedio <b>${COP(newAvg)}/${p.unidad_base}</b>`;
+}
+async function savePurchase(){
+ const p=productById(buyProduct.value),count=Number(buyCount.value),content=Number(buyContent.value),baseEach=toBase(content,buyMeasure.value,p.unidad_base),enter=count*baseEach,total=count*Number(buyPrice.value);
+ if(count<=0||content<=0||total<0)return alert('Revisa los datos.');
+ const old=invByProduct(p.id)||{cantidad:0,costo_promedio:0};const newQty=Number(old.cantidad)+enter,newAvg=((Number(old.cantidad)*Number(old.costo_promedio))+total)/newQty;
+ const {error:e1}=await sb.from('purchases').insert({user_id:user.id,product_id:p.id,cantidad_comprada:count,contenido_por_unidad:content,unidad_compra:buyMeasure.value,costo_total:total,cantidad_base_total:enter,costo_por_unidad_base:total/enter,nota:buyNote.value});
+ if(e1)return alert(e1.message);
+ const {error:e2}=await sb.from('inventory').upsert({user_id:user.id,product_id:p.id,cantidad:newQty,costo_promedio:newAvg,updated_at:new Date().toISOString()},{onConflict:'user_id,product_id'});
+ if(e2)return alert(e2.message);
+ await sb.from('inventory_movements').insert({user_id:user.id,product_id:p.id,tipo:'Compra',cantidad:enter,unidad:p.unidad_base,valor:total,nota:buyNote.value});
+ closeModal();await loadAll();
+}
+
+function openAdjustment(){
+ showModal(`<h2>Ajuste de inventario</h2><div class="formgrid">
+ <div><label>Producto</label><select id="adjProduct" onchange="adjProductChanged()">${productOptions()}</select></div>
+ <div><label>Tipo</label><select id="adjType"><option>Daño</option><option>Pérdida</option><option>Merma</option><option>Ajuste negativo</option><option>Ajuste positivo</option></select></div>
+ <div><label>Cantidad</label><input id="adjQty" type="number" min="0" step=".01"></div><div><label>Medida</label><select id="adjMeasure"></select></div>
+ <div><label>Nota</label><input id="adjNote"></div></div><div class="toolbar"><button class="btn primary" onclick="saveAdjustment()">Guardar</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+ adjProductChanged();
+}
+function adjProductChanged(){adjMeasure.innerHTML=measures(productById(adjProduct.value))}
+async function saveAdjustment(){
+ const p=productById(adjProduct.value),base=toBase(Number(adjQty.value),adjMeasure.value,p.unidad_base),positive=adjType.value==='Ajuste positivo',delta=positive?base:-base,old=invByProduct(p.id);
+ if(base<=0)return alert('Ingresa una cantidad.');if(Number(old?.cantidad||0)+delta<0)return alert('No puedes dejar inventario negativo.');
+ await sb.from('inventory').update({cantidad:Number(old?.cantidad||0)+delta,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('product_id',p.id);
+ await sb.from('inventory_movements').insert({user_id:user.id,product_id:p.id,tipo:adjType.value,cantidad:delta,unidad:p.unidad_base,valor:base*Number(old?.costo_promedio||0),nota:adjNote.value});
+ closeModal();await loadAll();
+}
+
+function ingredientProduct(i){return i.product_id?productById(i.product_id):productByLegacy(i.product_legacy_key)}
+function renderRecipeDetail(){
+ const r=recipeById(recipeList.value)||recipes[0];if(!r){recipeDetail.innerHTML='';return}
+ const its=recipeIngredients.filter(i=>i.recipe_id===r.id);
+ const rows=its.map(i=>{const p=ingredientProduct(i);const min=i.cantidad_min??i.cantidad,max=i.cantidad_max??i.cantidad;return `<tr><td>${i.nombre_ingrediente||p?.nombre||''}</td><td>${min==max?fmt(max):fmt(min)+'–'+fmt(max)} ${i.unidad}${i.por_boli?' por boli':''}</td><td>${i.nota||''}</td></tr>`}).join('');
+ recipeDetail.innerHTML=`<h2 style="margin-top:0">${r.nombre} ${r.es_sistema?'<span class="small">· Sistema</span>':'<span class="small">· Propia</span>'}</h2><div class="small">Rendimiento sugerido: ${r.rendimiento_sugerido??'No indicado'}</div>${r.descripcion?`<p>${r.descripcion}</p>`:''}<table style="margin-top:12px"><thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>${!r.es_sistema?`<div class="toolbar"><button class="btn danger" onclick="deleteRecipe('${r.id}')">Eliminar receta</button></div>`:''}`;
+}
+function openRecipeCreator(gourmet){
+ recipeDraft={name:gourmet?'Nueva receta Gourmet':'Nueva receta',yield:18,items:gourmet?[
+   {pid:productByLegacy('milk')?.id,q:1200,per:false},{pid:productByLegacy('cond')?.id,q:395,per:false},{pid:productByLegacy('cream')?.id,q:200,per:false},{pid:productByLegacy('compound')?.id,q:50,per:false},{pid:productByLegacy('liga')?.id,q:3.5,per:false}
+ ].filter(x=>x.pid):[]};
+ renderRecipeCreator();
+}
+function renderRecipeCreator(){
+ showModal(`<h2>Crear receta</h2><div class="formgrid"><div><label>Nombre</label><input id="rcName" value="${recipeDraft.name}"></div><div><label>Rendimiento esperado</label><input id="rcYield" type="number" min="1" value="${recipeDraft.yield}"></div></div><div class="toolbar"><button class="btn secondary" onclick="addDraftIngredient()">+ Ingrediente</button></div><div id="draftRows"></div><div class="toolbar"><button class="btn primary" onclick="saveRecipe()">Guardar receta</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+ renderDraftRows();
+}
+function addDraftIngredient(){if(!products.length)return;recipeDraft.items.push({pid:products[0].id,q:0,per:false});renderDraftRows()}
+function renderDraftRows(){draftRows.innerHTML=recipeDraft.items.map((i,n)=>`<div class="recipe-row"><div><label>Producto</label><select onchange="recipeDraft.items[${n}].pid=this.value">${productOptions(i.pid)}</select></div><div><label>Cantidad</label><input type="number" min="0" step=".01" value="${i.q}" oninput="recipeDraft.items[${n}].q=Number(this.value)"></div><div><label>Unidad</label><input disabled value="${productById(i.pid)?.unidad_base||''}"></div><div><label>Aplicación</label><select onchange="recipeDraft.items[${n}].per=this.value==='1'"><option value="0" ${!i.per?'selected':''}>Por lote</option><option value="1" ${i.per?'selected':''}>Por boli</option></select></div><button class="btn danger" onclick="recipeDraft.items.splice(${n},1);renderDraftRows()">Quitar</button></div>`).join('')}
+async function saveRecipe(){
+ const name=rcName.value.trim(),yieldN=Number(rcYield.value);if(!name||yieldN<=0||!recipeDraft.items.length)return alert('Completa la receta.');
+ const {data:r,error}=await sb.from('recipes').insert({user_id:user.id,nombre:name,rendimiento_sugerido:yieldN,es_sistema:false,activo:true}).select().single();if(error)return alert(error.message);
+ const rows=recipeDraft.items.map(i=>{const p=productById(i.pid);return {recipe_id:r.id,product_id:p.id,nombre_ingrediente:p.nombre,cantidad:Number(i.q),cantidad_min:Number(i.q),cantidad_max:Number(i.q),unidad:p.unidad_base,por_boli:!!i.per}});
+ const ins=await sb.from('recipe_ingredients').insert(rows);if(ins.error)return alert(ins.error.message);
+ closeModal();await loadAll();recipeList.value=r.id;renderRecipeDetail();
+}
+async function deleteRecipe(id){if(!confirm('¿Eliminar esta receta propia?'))return;const {error}=await sb.from('recipes').delete().eq('id',id);if(error)return alert(error.message);await loadAll()}
+
+function productionChanged(){
+ const r=recipeById(prodRecipe.value)||recipes[0];if(!r)return;
+ const lots=Math.max(1,Number(prodLots.value||1));prodSuggested.value=r.rendimiento_sugerido?`${r.rendimiento_sugerido*lots}`:'—';prodActual.value=r.rendimiento_sugerido?r.rendimiento_sugerido*lots:'';
+ extras=[];renderExtras();calculateProduction();
+}
+function addExtra(){if(!products.length)return;extras.push({pid:products[0].id,amount:0,mode:'per',measure:products[0].unidad_base});renderExtras();calculateProduction()}
+function renderExtras(){if(!extrasBox)return;extrasBox.innerHTML=extras.map((e,n)=>{const p=productById(e.pid);return `<div class="extra-row"><div><label>Extra</label><select onchange="extras[${n}].pid=this.value;extras[${n}].measure=productById(this.value).unidad_base;renderExtras();calculateProduction()">${productOptions(e.pid)}</select></div><div><label>Cantidad</label><input type="number" min="0" step=".01" value="${e.amount}" oninput="extras[${n}].amount=Number(this.value);calculateProduction()"></div><div><label>Medida</label><select onchange="extras[${n}].measure=this.value;calculateProduction()">${measures(p)}</select></div><div><label>Aplicación</label><select onchange="extras[${n}].mode=this.value;calculateProduction()"><option value="per" ${e.mode==='per'?'selected':''}>Por boli</option><option value="total" ${e.mode==='total'?'selected':''}>Total</option></select></div><button class="btn danger" onclick="extras.splice(${n},1);renderExtras();calculateProduction()">Quitar</button></div>`}).join('')}
+function getProductionData(){
+ const r=recipeById(prodRecipe.value),lots=Math.max(1,Number(prodLots.value||1)),actual=Math.max(1,Number(prodActual.value||1));
+ if(!r||!r.rendimiento_sugerido)return {error:'Esta receta no tiene rendimiento definido.'};
+ const items=recipeIngredients.filter(i=>i.recipe_id===r.id),cons=[],suggested=r.rendimiento_sugerido*lots;
+ let total=0,enough=true;
+ for(const i of items){
+   const p=ingredientProduct(i);if(!p)continue;
+   const qtyMax=Number(i.cantidad_max??i.cantidad)*(i.por_boli?actual:lots);
+   const iv=invByProduct(p.id)||{cantidad:0,costo_promedio:0};const cost=qtyMax*Number(iv.costo_promedio);
+   if(Number(iv.cantidad)<qtyMax)enough=false;total+=cost;cons.push({p,qty:qtyMax,cost,type:'INGREDIENTE'});
+ }
+ for(const e of extras){const p=productById(e.pid),raw=Number(e.amount)*(e.mode==='per'?actual:1),q=toBase(raw,e.measure,p.unidad_base),iv=invByProduct(p.id)||{cantidad:0,costo_promedio:0},cost=q*Number(iv.costo_promedio);if(Number(iv.cantidad)<q)enough=false;total+=cost;cons.push({p,qty:q,cost,type:'EXTRA'})}
+ return {r,lots,actual,suggested,total,enough,cons};
+}
+function calculateProduction(){
+ const d=getProductionData();if(d.error){productionCalc.innerHTML=`<div class="msg err">${d.error}</div>`;return}
+ productionCalc.innerHTML=`<table><thead><tr><th>Producto</th><th>Necesario</th><th>Disponible</th><th>Estado</th><th>Costo</th></tr></thead><tbody>${d.cons.map(c=>{const iv=invByProduct(c.p.id)||{cantidad:0};return `<tr><td>${c.p.nombre}${c.type==='EXTRA'?' · Extra':''}</td><td>${fmt(c.qty)} ${c.p.unidad_base}</td><td>${fmt(iv.cantidad)} ${c.p.unidad_base}</td><td class="${Number(iv.cantidad)>=c.qty?'good':'bad'}">${Number(iv.cantidad)>=c.qty?'Disponible':'Falta'}</td><td>${COP(c.cost)}</td></tr>`}).join('')}</tbody></table><div class="grid" style="margin-top:12px"><div class="card"><div class="small">Costo total</div><div class="kpi">${COP(d.total)}</div></div><div class="card"><div class="small">Costo real por boli</div><div class="kpi">${COP(d.total/d.actual)}</div></div></div>`;
+}
+async function saveProduction(){
+ const d=getProductionData();if(d.error)return alert(d.error);if(!d.enough)return alert('Falta inventario.');
+ const {data:pr,error}=await sb.from('productions').insert({user_id:user.id,recipe_id:d.r.id,nombre_receta:d.r.nombre,lotes:d.lots,bolis_sugeridos:d.suggested,bolis_reales:d.actual,costo_total:d.total,costo_por_boli:d.total/d.actual,estado:'ACTIVA'}).select().single();if(error)return alert(error.message);
+ for(const c of d.cons){
+   const iv=invByProduct(c.p.id);
+   await sb.from('inventory').update({cantidad:Number(iv.cantidad)-c.qty,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('product_id',c.p.id);
+   await sb.from('inventory_movements').insert({user_id:user.id,product_id:c.p.id,tipo:c.type==='EXTRA'?'Extra producción':'Producción',cantidad:-c.qty,unidad:c.p.unidad_base,valor:c.cost,referencia_tipo:'PRODUCCION',referencia_id:pr.id,nota:d.r.nombre});
+   await sb.from('production_consumption').insert({production_id:pr.id,product_id:c.p.id,nombre_producto:c.p.nombre,cantidad:c.qty,unidad:c.p.unidad_base,costo:c.cost,tipo:c.type});
+ }
+ const old=finished.find(f=>f.recipe_id===d.r.id);
+ if(old)await sb.from('finished_inventory').update({cantidad:Number(old.cantidad)+d.actual,updated_at:new Date().toISOString()}).eq('id',old.id);
+ else await sb.from('finished_inventory').insert({user_id:user.id,recipe_id:d.r.id,nombre_sabor:d.r.nombre,cantidad:d.actual});
+ await sb.from('production_audit').insert({user_id:user.id,production_id:pr.id,accion:'CREACIÓN',detalle:`${d.actual} bolis agregados al inventario.`});
+ alert('Producción guardada.');await loadAll();
+}
+
+function setupDateFilters(){
+ const now=new Date(),years=[...new Set(productions.map(p=>new Date(p.fecha).getFullYear()))];if(!years.includes(now.getFullYear()))years.push(now.getFullYear());years.sort((a,b)=>b-a);
+ monthFilter.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i}">${new Date(2020,i,1).toLocaleString('es-CO',{month:'long'})}</option>`).join('');monthFilter.value=now.getMonth();
+ yearFilter.innerHTML=years.map(y=>`<option>${y}</option>`).join('');yearFilter.value=now.getFullYear();
+}
+function renderFinished(){
+ finishedBody.innerHTML=finished.map(f=>`<tr><td>${f.nombre_sabor}</td><td><b>${fmt(f.cantidad)}</b></td></tr>`).join('');
+ const m=Number(monthFilter.value),y=Number(yearFilter.value);
+ const list=productions.filter(p=>{const d=new Date(p.fecha);return d.getMonth()===m&&d.getFullYear()===y});
+ productionHistory.innerHTML=list.map(p=>`<tr><td>${dt(p.fecha)}</td><td>${p.nombre_receta}</td><td>${fmt(p.lotes)}</td><td>${fmt(p.bolis_sugeridos)}</td><td>${fmt(p.bolis_reales)}</td><td>${COP(p.costo_total)}</td></tr>`).join('')||'<tr><td colspan="6">Sin producciones ese mes.</td></tr>';
+}
+async function exportCloudBackup(){
+ const payload={app:'Bolis Control Online',version:'1.0',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished}};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Bolis_Control_Online_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);msg(backupMsg,'Respaldo generado. Revisa Descargas.');
+}
+
+init();
+</script>
+</body>
+</html>
