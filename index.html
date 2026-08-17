@@ -6,6 +6,7 @@
 <title>BERTELITOS · Bolis Control</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#166534;--red:#b91c1c;--blue:#1d4ed8}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -108,6 +109,117 @@ input,select{min-height:44px}
   main{padding:10px}
   .mobileBrand{font-size:15px}
   .kpi{font-size:20px}
+}
+
+
+.receiptImageCard{
+  width:420px;
+  max-width:100%;
+  background:#fffdf8;
+  color:#172033;
+  border-radius:26px;
+  padding:28px;
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+  box-shadow:0 12px 35px #00000018;
+  position:relative;
+  overflow:hidden;
+}
+.receiptImageCard:before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:8px;
+  background:linear-gradient(90deg,#f4b942,#f59e0b,#f4b942);
+}
+.receiptImageBrand{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:.8px;
+  margin-top:4px;
+}
+.receiptImageSub{
+  text-align:center;
+  color:#6b7280;
+  font-size:13px;
+  margin-top:4px;
+  margin-bottom:20px;
+}
+.receiptImageMeta{
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  border-radius:15px;
+  padding:13px 15px;
+  font-size:13px;
+  line-height:1.6;
+}
+.receiptImageItems{margin-top:16px}
+.receiptImageItem{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 0;
+  border-bottom:1px dashed #d1d5db;
+}
+.receiptImageItemName{font-weight:800}
+.receiptImageItemSmall{font-size:12px;color:#6b7280;margin-top:3px}
+.receiptImageTotals{margin-top:14px}
+.receiptImageTotalRow{
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  font-size:14px;
+}
+.receiptImageGrand{
+  margin-top:8px;
+  padding-top:12px;
+  border-top:2px solid #172033;
+  font-size:22px;
+  font-weight:900;
+}
+.receiptImageThanks{
+  text-align:center;
+  font-weight:800;
+  margin-top:22px;
+}
+.receiptImageSocial{
+  text-align:center;
+  color:#6b7280;
+  font-size:12px;
+  line-height:1.65;
+  margin-top:9px;
+}
+.receiptImageFooter{
+  text-align:center;
+  font-size:10px;
+  color:#9ca3af;
+  margin-top:16px;
+}
+.receiptImageLogo{
+  display:inline-block;
+  position:relative;
+  width:22px;
+  height:38px;
+}
+.receiptImageLogo .tube{
+  position:absolute;left:4px;top:7px;width:14px;height:29px;
+  border-radius:7px 7px 10px 10px;
+  border:2px solid #172033;
+  background:linear-gradient(180deg,#ffd978,#f59e0b);
+}
+.receiptImageLogo .tie{
+  position:absolute;left:8px;top:0;width:6px;height:9px;
+  border:2px solid #172033;border-radius:6px;z-index:2;
+}
+#receiptImageStage{
+  position:fixed;
+  left:-99999px;
+  top:0;
+  width:460px;
+  z-index:-1;
 }
 
 </style>
@@ -662,7 +774,7 @@ function renderSales(){
    const its=saleItems.filter(i=>i.sale_id===s.id),units=its.reduce((a,i)=>a+Number(i.cantidad),0);
    const who=[s.cliente_nombre,s.nota].filter(Boolean).join(' · ')||'—';
    const cancelled=s.estado==='ANULADA';
-   return `<tr style="${cancelled?'opacity:.6':''}"><td>${dt(s.fecha)}</td><td>#${String(s.numero_recibo).padStart(5,'0')}</td><td>${who}${cancelled&&s.anulada_motivo?`<br><small>Motivo anulación: ${s.anulada_motivo}</small>`:''}</td><td>${units}</td><td>${COP(s.subtotal)}</td><td>${COP(s.descuento_monto)}</td><td>${COP(s.envio_cobrado||0)}</td><td><b>${COP(s.total)}</b></td><td><span class="status-pill ${cancelled?'status-cancel':'status-active'}">${s.estado}</span></td><td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="showReceipt('${s.id}')">Recibo</button><button class="btn secondary" onclick="shareWhatsApp('${s.id}')">WhatsApp</button><button class="btn secondary" onclick="shareEmail('${s.id}')">Correo</button>${cancelled?'':`<button class="btn danger" onclick="openCancelSale('${s.id}',${s.numero_recibo})">Anular</button>`}</div></td></tr>`;
+   return `<tr style="${cancelled?'opacity:.6':''}"><td>${dt(s.fecha)}</td><td>#${String(s.numero_recibo).padStart(5,'0')}</td><td>${who}${cancelled&&s.anulada_motivo?`<br><small>Motivo anulación: ${s.anulada_motivo}</small>`:''}</td><td>${units}</td><td>${COP(s.subtotal)}</td><td>${COP(s.descuento_monto)}</td><td>${COP(s.envio_cobrado||0)}</td><td><b>${COP(s.total)}</b></td><td><span class="status-pill ${cancelled?'status-cancel':'status-active'}">${s.estado}</span></td><td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="showReceipt('${s.id}')">Recibo</button><button class="btn secondary" onclick="shareWhatsAppImage('${s.id}')">WhatsApp imagen</button><button class="btn secondary" onclick="shareEmail('${s.id}')">Correo</button>${cancelled?'':`<button class="btn danger" onclick="openCancelSale('${s.id}',${s.numero_recibo})">Anular</button>`}</div></td></tr>`;
  }).join('')||'<tr><td colspan="10">No hay ventas registradas en este mes.</td></tr>';
 }
 function openCancelSale(id,number){
@@ -689,7 +801,7 @@ function showReceipt(id){
  <div class="receipt-meta"><b>Recibo:</b> #${String(sale.numero_recibo).padStart(5,'0')}<br><b>Fecha:</b> ${dt(sale.fecha)}${sale.cliente_nombre?`<br><b>Cliente:</b> ${sale.cliente_nombre}`:''}${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}${sale.estado==='ANULADA'?`<br><span class="status-pill status-cancel">ANULADA</span>${sale.anulada_motivo?` · ${sale.anulada_motivo}`:''}`:''}</div>
  <table><tbody>${rows}<tr><td>Subtotal</td><td style="text-align:right">${COP(sale.subtotal)}</td></tr>${Number(sale.descuento_monto)>0?`<tr><td>Descuento</td><td style="text-align:right">-${COP(sale.descuento_monto)}</td></tr>`:''}${Number(sale.envio_cobrado||0)>0?`<tr><td>Envío</td><td style="text-align:right">${COP(sale.envio_cobrado)}</td></tr>`:''}<tr><td style="font-size:20px;font-weight:900;border-bottom:0">TOTAL</td><td style="text-align:right;font-size:20px;font-weight:900;border-bottom:0">${COP(sale.total)}</td></tr></tbody></table>
  <div class="receipt-footer"><b>${b.mensaje_recibo||'¡Gracias por elegir BERTELITOS!'}</b><div class="receipt-social">${businessLine()}</div></div>
- <div class="toolbar no-print" style="justify-content:center;margin-top:20px"><button class="btn primary" onclick="window.print()">Imprimir / Guardar PDF</button><button class="btn secondary" onclick="downloadReceiptPDF('${sale.id}')">Descargar PDF</button><button class="btn secondary" onclick="shareWhatsApp('${sale.id}')">WhatsApp</button><button class="btn secondary" onclick="shareEmail('${sale.id}')">Correo</button><button class="btn secondary" onclick="shareReceiptPDF('${sale.id}')">Compartir PDF</button><button class="btn secondary" onclick="closeModal()">Cerrar</button></div></div></div>`);
+ <div class="toolbar no-print" style="justify-content:center;margin-top:20px"><button class="btn primary" onclick="window.print()">Imprimir / Guardar PDF</button><button class="btn secondary" onclick="downloadReceiptPNG('${sale.id}')">Descargar imagen</button><button class="btn secondary" onclick="downloadReceiptPDF('${sale.id}')">Descargar PDF</button><button class="btn secondary" onclick="shareWhatsAppImage('${sale.id}')">WhatsApp imagen</button><button class="btn secondary" onclick="shareEmail('${sale.id}')">Correo</button><button class="btn secondary" onclick="shareReceiptPDF('${sale.id}')">Compartir PDF</button><button class="btn secondary" onclick="closeModal()">Cerrar</button></div></div></div>`);
 }
 
 function receiptText(id){
@@ -706,6 +818,81 @@ function receiptText(id){
  text+=`TOTAL: ${COP(sale.total)}\n\n${b.mensaje_recibo||'¡Gracias por elegir BERTELITOS!'}\n`;
  if(b.telefono)text+=`WhatsApp: ${b.telefono}\n`; if(b.instagram)text+=`Instagram: ${b.instagram}\n`; if(b.facebook)text+=`Facebook: ${b.facebook}\n`; if(b.tiktok)text+=`TikTok: ${b.tiktok}\n`;
  return text;
+}
+
+function receiptImageHTML(id){
+ const sale=sales.find(x=>x.id===id);if(!sale)return '';
+ const its=saleItems.filter(i=>i.sale_id===id),b=businessSettings||{};
+ const items=its.map(i=>`
+   <div class="receiptImageItem">
+     <div><div class="receiptImageItemName">${i.nombre_sabor}</div><div class="receiptImageItemSmall">${i.cantidad} × ${COP(i.precio_unitario)}</div></div>
+     <div style="font-weight:800">${COP(i.subtotal)}</div>
+   </div>`).join('');
+ const social=[
+   b.telefono?`WhatsApp: ${b.telefono}`:'',
+   b.instagram?`Instagram: ${b.instagram}`:'',
+   b.facebook?`Facebook: ${b.facebook}`:'',
+   b.tiktok?`TikTok: ${b.tiktok}`:'',
+   [b.direccion,b.ciudad].filter(Boolean).join(' · ')
+ ].filter(Boolean).join('<br>');
+ return `<div class="receiptImageCard">
+   <div class="receiptImageBrand"><span class="receiptImageLogo"><span class="tie"></span><span class="tube"></span></span>${b.nombre_empresa||'BERTELITOS'}</div>
+   <div class="receiptImageSub">Bolis gourmet · Recibo de compra</div>
+   <div class="receiptImageMeta">
+     <b>Recibo:</b> #${String(sale.numero_recibo).padStart(5,'0')}<br>
+     <b>Fecha:</b> ${dt(sale.fecha)}
+     ${sale.cliente_nombre?`<br><b>Cliente:</b> ${sale.cliente_nombre}`:''}
+     ${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}
+   </div>
+   <div class="receiptImageItems">${items}</div>
+   <div class="receiptImageTotals">
+     <div class="receiptImageTotalRow"><span>Subtotal</span><b>${COP(sale.subtotal)}</b></div>
+     ${Number(sale.descuento_monto)>0?`<div class="receiptImageTotalRow"><span>Descuento</span><b>-${COP(sale.descuento_monto)}</b></div>`:''}
+     ${Number(sale.envio_cobrado||0)>0?`<div class="receiptImageTotalRow"><span>Envío</span><b>${COP(sale.envio_cobrado)}</b></div>`:''}
+     <div class="receiptImageTotalRow receiptImageGrand"><span>TOTAL</span><span>${COP(sale.total)}</span></div>
+   </div>
+   <div class="receiptImageThanks">${b.mensaje_recibo||'¡Gracias por elegir BERTELITOS!'}</div>
+   <div class="receiptImageSocial">${social}</div>
+   <div class="receiptImageFooter">Comprobante generado por BERTELITOS · Bolis Control</div>
+ </div>`;
+}
+async function generateReceiptPNG(id){
+ const stage=document.getElementById('receiptImageStage');
+ stage.innerHTML=receiptImageHTML(id);
+ const card=stage.querySelector('.receiptImageCard');
+ if(!card)throw new Error('No se pudo generar el recibo.');
+ await new Promise(r=>setTimeout(r,80));
+ const canvas=await html2canvas(card,{scale:2,backgroundColor:'#fffdf8',useCORS:true,logging:false});
+ return await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
+}
+async function downloadReceiptPNG(id){
+ const sale=sales.find(x=>x.id===id);if(!sale)return;
+ try{
+   const blob=await generateReceiptPNG(id);
+   const url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download=`BERTELITOS_Recibo_${String(sale.numero_recibo).padStart(5,'0')}.png`;
+   a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
+ }catch(e){alert('No se pudo generar la imagen: '+e.message)}
+}
+async function shareWhatsAppImage(id){
+ const sale=sales.find(x=>x.id===id);if(!sale)return;
+ try{
+   const blob=await generateReceiptPNG(id);
+   const file=new File([blob],`BERTELITOS_Recibo_${String(sale.numero_recibo).padStart(5,'0')}.png`,{type:'image/png'});
+   if(navigator.canShare && navigator.canShare({files:[file]})){
+     await navigator.share({
+       title:`Recibo BERTELITOS #${String(sale.numero_recibo).padStart(5,'0')}`,
+       text:'Gracias por tu compra en BERTELITOS.',
+       files:[file]
+     });
+   }else{
+     const url=URL.createObjectURL(blob),a=document.createElement('a');
+     a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
+     alert('Tu navegador no permite adjuntar la imagen directamente. Guardé el recibo como PNG para que lo envíes por WhatsApp.');
+   }
+ }catch(e){
+   if(e?.name!=='AbortError')alert('No se pudo compartir la imagen: '+e.message);
+ }
 }
 function shareWhatsApp(id){
  const text=receiptText(id);
@@ -810,11 +997,12 @@ async function saveBusinessSettings(){
  closeModal();await loadAll();
 }
 async function exportCloudBackup(){
- const payload={app:'BERTELITOS · Bolis Control Online',version:'1.4',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,businessSettings}};
+ const payload={app:'BERTELITOS · Bolis Control Online',version:'1.5',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,businessSettings}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Bolis_Control_Online_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);msg(backupMsg,'Respaldo generado. Revisa Descargas.');
 }
 
 init();
 </script>
+<div id="receiptImageStage"></div>
 </body>
 </html>
