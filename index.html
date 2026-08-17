@@ -222,6 +222,18 @@ input,select{min-height:44px}
   z-index:-1;
 }
 
+
+.miniSearch{
+ display:flex;align-items:center;gap:7px;width:min(310px,100%);
+ border:1px solid var(--line);background:#fff;border-radius:10px;
+ padding:0 10px;margin:8px 0 12px;
+}
+.miniSearch span{color:var(--muted);font-size:18px}
+.miniSearch input{
+ border:0!important;box-shadow:none!important;background:transparent!important;
+ padding:9px 0!important;min-height:38px;width:100%;outline:none;
+}
+
 </style>
 </head>
 <body>
@@ -274,6 +286,8 @@ input,select{min-height:44px}
       <button data-section="bolis">Inventario de bolis</button>
       <button data-section="ventas">Ventas</button>
       <button data-section="ganancias">Ganancias</button>
+      <button data-section="calculadora">Calculadora rápida</button>
+      <button data-section="reciboslibres">Recibos libres</button>
       <button data-section="respaldo">Respaldo</button>
     </div>
     <div class="userbox"><div id="userEmail"></div><button class="link" style="color:#fff;margin-top:10px" onclick="logout()">Cerrar sesión</button></div>
@@ -293,12 +307,14 @@ input,select{min-height:44px}
     <section id="productos" class="section">
       <h1>Productos</h1><div class="sub">Materias primas de tu cuenta.</div>
       <div class="toolbar"><button class="btn primary" onclick="openNewProduct()">+ Nuevo producto</button></div>
+      <div class="miniSearch"><span>⌕</span><input id="productSearch" type="search" placeholder="Buscar producto..." oninput="renderProducts()"></div>
       <table><thead><tr><th>Producto</th><th>Unidad</th><th>Existencia</th><th>Costo promedio</th><th>Valor</th><th></th></tr></thead><tbody id="productsBody"></tbody></table>
     </section>
 
     <section id="inventario" class="section">
       <h1>Inventario</h1><div class="sub">Compras, daños, pérdidas y ajustes.</div>
       <div class="toolbar"><button class="btn primary" onclick="openPurchase()">+ Registrar compra</button><button class="btn secondary" onclick="openAdjustment()">Daño / pérdida / ajuste</button></div>
+      <div class="miniSearch"><span>⌕</span><input id="inventorySearch" type="search" placeholder="Buscar ingrediente..." oninput="renderInventory()"></div>
       <table><thead><tr><th>Producto</th><th>Existencia</th><th>Costo promedio</th><th>Valor</th></tr></thead><tbody id="inventoryBody"></tbody></table>
       <h3>Últimos movimientos</h3>
       <table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Valor</th></tr></thead><tbody id="movementBody"></tbody></table>
@@ -355,8 +371,22 @@ input,select{min-height:44px}
         <div class="card"><div class="small">Descuentos</div><div class="kpi" id="kDiscounts">$0</div></div>
         <div class="card"><div class="small">Total vendido</div><div class="kpi" id="kSalesTotal">$0</div></div>
       </div>
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+          <div><h3 style="margin:0">Resumen financiero del mes</h3><div class="small">Inversión, dinero recibido e inventario.</div></div>
+          <button class="btn secondary" onclick="openMonthlyInvestmentDetail()">Ver detalle de insumos</button>
+        </div>
+        <div class="grid" style="margin-top:14px">
+          <div><div class="small">Venía del mes anterior</div><div class="kpi" id="mOpeningInventory">$0</div></div>
+          <div><div class="small">Invertido este mes</div><div class="kpi" id="mPurchases">$0</div></div>
+          <div><div class="small">Ventas cobradas</div><div class="kpi" id="mCollected">$0</div></div>
+          <div><div class="small">Inventario restante</div><div class="kpi" id="mClosingInventory">$0</div></div>
+          <div><div class="small">Efectivo recibido</div><div class="kpi" id="mCash">$0</div></div>
+          <div><div class="small">Transferencias</div><div class="kpi" id="mTransfer">$0</div></div>
+        </div>
+      </div>
       <div style="overflow:auto;margin-top:14px">
-        <table><thead><tr><th>Fecha</th><th>Recibo</th><th>Cliente / nota</th><th>Bolis</th><th>Subtotal</th><th>Descuento</th><th>Envío</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="salesBody"></tbody></table>
+        <table><thead><tr><th>Fecha</th><th>Recibo</th><th>Cliente / nota</th><th>Bolis</th><th>Pago</th><th>Subtotal</th><th>Descuento</th><th>Envío</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="salesBody"></tbody></table>
       </div>
     </section>
 
@@ -401,6 +431,28 @@ input,select{min-height:44px}
       </div>
     </section>
 
+
+    <section id="calculadora" class="section">
+      <h1>Calculadora de precios</h1>
+      <div class="sub">Escoge una receta existente, coloca cuánto pagaste por cada ingrediente y calcula el costo real de cada boli.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openQuickCalc()">+ Nuevo cálculo</button></div>
+      <div class="grid" style="margin-top:14px">
+        <div class="card"><div class="small">Cálculos guardados</div><div class="kpi" id="kQuickCalcs">0</div></div>
+      </div>
+      <div style="overflow:auto;margin-top:14px"><table><thead><tr><th>Fecha</th><th>Nombre / sabor</th><th>Rendimiento</th><th>Costo total</th><th>Costo por boli</th><th>Precio venta</th><th>Ganancia/boli</th><th>Acciones</th></tr></thead><tbody id="quickCalcBody"></tbody></table></div>
+    </section>
+
+    <section id="reciboslibres" class="section">
+      <h1>Recibos libres</h1>
+      <div class="sub">Comprobantes independientes. Se guardan, pero no descuentan inventario ni entran en ganancias.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openFreeReceipt()">+ Nuevo recibo libre</button></div>
+      <div class="formgrid">
+        <div><label>Mes</label><select id="freeReceiptMonth" onchange="renderFreeReceipts()"></select></div>
+        <div><label>Año</label><select id="freeReceiptYear" onchange="renderFreeReceipts()"></select></div>
+      </div>
+      <div style="overflow:auto;margin-top:14px"><table><thead><tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="freeReceiptBody"></tbody></table></div>
+    </section>
+
     <section id="respaldo" class="section">
       <h1>Respaldo</h1><div class="sub">Aunque los datos están en la nube, puedes descargar una copia JSON.</div>
       <div class="card"><button class="btn primary" onclick="exportCloudBackup()">Exportar respaldo completo</button><div id="backupMsg"></div></div>
@@ -417,7 +469,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let session=null,user=null;
 let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],businessSettings=null;
-let extras=[],recipeDraft=null,saleDraft=[];
+let extras=[],recipeDraft=null,saleDraft=[],quickCalculations=[],freeReceipts=[],quickCalcDraft=[],freeReceiptDraft=[];
 
 const COP=n=>'$'+Math.round(Number(n||0)).toLocaleString('es-CO');
 const fmt=n=>Number(n||0).toLocaleString('es-CO',{maximumFractionDigits:2});
@@ -470,24 +522,26 @@ async function enterApp(){
 }
 
 async function loadAll(){
- const [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs]=await Promise.all([
+ const [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs,qc,fr]=await Promise.all([
    sb.from('products').select('*').eq('activo',true).order('nombre'),
    sb.from('inventory').select('*'),
    sb.from('recipes').select('*').eq('activo',true).order('nombre'),
    sb.from('recipe_ingredients').select('*').order('created_at'),
-   sb.from('inventory_movements').select('*').order('fecha',{ascending:false}).limit(100),
+   sb.from('inventory_movements').select('*').order('fecha',{ascending:false}).limit(5000),
    sb.from('productions').select('*').order('fecha',{ascending:false}),
    sb.from('finished_inventory').select('*').order('nombre_sabor'),
    sb.from('finished_prices').select('*'),
    sb.from('sales').select('*').order('fecha',{ascending:false}).limit(1000),
    sb.from('sale_items').select('*').limit(5000),
    sb.from('finished_losses').select('*').order('fecha',{ascending:false}).limit(500),
-   sb.from('business_settings').select('*').maybeSingle()
+   sb.from('business_settings').select('*').maybeSingle(),
+   sb.from('quick_calculations').select('*').order('created_at',{ascending:false}),
+   sb.from('free_receipts').select('*').order('fecha',{ascending:false})
  ]);
- for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs]) if(x.error){alert(x.error.message);return}
+ for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs,qc,fr]) if(x.error){alert(x.error.message);return}
  products=p.data||[];inventory=i.data||[];recipes=r.data||[];recipeIngredients=ri.data||[];
  movements=m.data||[];productions=pr.data||[];finished=f.data||[];finishedPrices=fp.data||[];
- sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];businessSettings=bs.data||null;
+ sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];businessSettings=bs.data||null;quickCalculations=qc.data||[];freeReceipts=fr.data||[];
  renderAll();
 }
 
@@ -501,19 +555,43 @@ function makeTablesResponsive(){
    w.appendChild(t);
  });
 }
+function renderProducts(){
+ const q=(document.getElementById('productSearch')?.value||'').trim().toLowerCase();
+ const list=products.filter(p=>{
+   const text=[p.nombre,p.unidad_base,p.categoria,p.marca].filter(Boolean).join(' ').toLowerCase();
+   return !q || text.includes(q);
+ });
+ productsBody.innerHTML=list.map(p=>{
+   const i=invByProduct(p.id)||{cantidad:0,costo_promedio:0};
+   return `<tr><td>${p.nombre}</td><td>${p.unidad_base}</td><td>${fmt(i.cantidad)} ${p.unidad_base}</td><td>${COP(i.costo_promedio)}/${p.unidad_base}</td><td>${COP(Number(i.cantidad)*Number(i.costo_promedio))}</td><td><button class="btn danger" onclick="deleteProduct('${p.id}')">Eliminar</button></td></tr>`;
+ }).join('') || '<tr><td colspan="6">No se encontraron productos.</td></tr>';
+}
+
+function renderInventory(){
+ const q=(document.getElementById('inventorySearch')?.value||'').trim().toLowerCase();
+ const list=products.filter(p=>{
+   const text=[p.nombre,p.unidad_base,p.categoria,p.marca].filter(Boolean).join(' ').toLowerCase();
+   return !q || text.includes(q);
+ });
+ inventoryBody.innerHTML=list.map(p=>{
+   const i=invByProduct(p.id)||{cantidad:0,costo_promedio:0};
+   return `<tr><td>${p.nombre}</td><td>${fmt(i.cantidad)} ${p.unidad_base}</td><td>${COP(i.costo_promedio)}/${p.unidad_base}</td><td>${COP(Number(i.cantidad)*Number(i.costo_promedio))}</td></tr>`;
+ }).join('') || '<tr><td colspan="4">No se encontraron productos en inventario.</td></tr>';
+}
+
 function renderAll(){
  kProducts.textContent=products.length;
  kInventory.textContent=COP(inventory.reduce((s,i)=>s+Number(i.cantidad)*Number(i.costo_promedio),0));
  kRecipes.textContent=recipes.length;
  kBolis.textContent=finished.reduce((s,f)=>s+Number(f.cantidad),0);
 
- productsBody.innerHTML=products.map(p=>{const i=invByProduct(p.id)||{cantidad:0,costo_promedio:0};return `<tr><td>${p.nombre}</td><td>${p.unidad_base}</td><td>${fmt(i.cantidad)} ${p.unidad_base}</td><td>${COP(i.costo_promedio)}/${p.unidad_base}</td><td>${COP(Number(i.cantidad)*Number(i.costo_promedio))}</td><td><button class="btn danger" onclick="deleteProduct('${p.id}')">Eliminar</button></td></tr>`}).join('');
- inventoryBody.innerHTML=productsBody.innerHTML.replace(/<td><button[\s\S]*?<\/button><\/td>/g,'');
+ renderProducts();
+ renderInventory();
  movementBody.innerHTML=movements.slice(0,30).map(m=>`<tr><td>${dt(m.fecha)}</td><td>${productById(m.product_id)?.nombre||''}</td><td>${m.tipo}</td><td>${fmt(m.cantidad)} ${m.unidad||''}</td><td>${COP(m.valor)}</td></tr>`).join('');
 
  const opts=recipes.map(r=>`<option value="${r.id}">${r.nombre}${r.es_sistema?'':' · Propia'}</option>`).join('');
  recipeList.innerHTML=opts;prodRecipe.innerHTML=opts;
- renderRecipeDetail();productionChanged();setupDateFilters();setupSalesDateFilters();setupProfitFilters();renderFinished();renderSales();renderProfit();renderExtras();setTimeout(makeTablesResponsive,0);
+ renderRecipeDetail();productionChanged();setupDateFilters();setupSalesDateFilters();setupProfitFilters();renderFinished();renderSales();renderProfit();renderExtras();setupFreeReceiptFilters();renderQuickCalculations();renderFreeReceipts();setTimeout(makeTablesResponsive,0);
 }
 
 function toggleMobileNav(){
@@ -531,8 +609,8 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
  window.scrollTo({top:0,behavior:'smooth'});
 });
 
-function showModal(h){modalBox.innerHTML=h;modal.classList.add('show')}
-function closeModal(){modal.classList.remove('show')}
+function showModal(h){const box=document.getElementById('modalBox'),m=document.getElementById('modal');if(!box||!m){alert('No se pudo abrir la ventana.');return;}box.innerHTML=h;m.classList.add('show')}
+function closeModal(){const m=document.getElementById('modal');if(m)m.classList.remove('show')}
 modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
 function productOptions(selected=''){return products.map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${p.nombre}</option>`).join('')}
 function measures(p){
@@ -722,12 +800,24 @@ function saleFlavorOptions(selected=''){
  return finished.filter(f=>Number(f.cantidad)>0).map(f=>`<option value="${f.recipe_id}" ${f.recipe_id===selected?'selected':''}>${f.nombre_sabor} · ${fmt(f.cantidad)} disponibles</option>`).join('');
 }
 function openSale(){
- if(!finished.some(f=>Number(f.cantidad)>0))return alert('No hay bolis disponibles para vender.');
- const first=finished.find(f=>Number(f.cantidad)>0);
+ const available=finished.filter(f=>Number(f.cantidad)>0);
+ if(!available.length){alert('No hay bolis disponibles para vender. Primero registra una producción.');return;}
+ const first=available[0];
  saleDraft=[{recipe_id:first.recipe_id,cantidad:1}];
  showModal(`<h2>Registrar venta · BERTELITOS</h2>
- <div class="formgrid"><div><label>Nombre / cliente</label><input id="saleCustomer" placeholder="Ej. María"></div><div><label>Nota</label><input id="saleNote" placeholder="Ej. Entrega en oficina"></div><div><label>Descuento</label><select id="saleDiscountType" onchange="saleCalc()"><option value="NINGUNO">Sin descuento</option><option value="PORCENTAJE">Porcentaje %</option><option value="VALOR">Valor en pesos</option></select></div><div><label>Valor descuento</label><input id="saleDiscountValue" type="number" min="0" value="0" oninput="saleCalc()"></div><div><label>Envío cobrado al cliente</label><input id="saleShipping" type="number" min="0" value="0" oninput="saleCalc()" placeholder="0 si no cobra envío"></div><div><label>Costo real del envío</label><input id="saleShippingCost" type="number" min="0" value="0" oninput="saleCalc()" placeholder="Lo que pagas al domiciliario"></div></div>
- <div class="toolbar"><button class="btn secondary" onclick="addSaleRow()">+ Agregar sabor</button></div><div id="saleRows"></div><div id="saleTotals"></div>
+ <div class="formgrid">
+   <div><label>Nombre / cliente</label><input id="saleCustomer" placeholder="Ej. María"></div>
+   <div><label>Nota</label><input id="saleNote" placeholder="Ej. Entrega en oficina"></div>
+   <div><label>Descuento</label><select id="saleDiscountType" onchange="saleCalc()"><option value="NINGUNO">Sin descuento</option><option value="PORCENTAJE">Porcentaje %</option><option value="VALOR">Valor en pesos</option></select></div>
+   <div><label>Valor descuento</label><input id="saleDiscountValue" type="number" min="0" value="0" oninput="saleCalc()"></div>
+   <div><label>Envío cobrado al cliente</label><input id="saleShipping" type="number" min="0" value="0" oninput="saleCalc()" placeholder="0 si no cobra envío"></div>
+   <div><label>Costo real del envío</label><input id="saleShippingCost" type="number" min="0" value="0" oninput="saleCalc()" placeholder="Lo que pagas al domiciliario"></div>
+   <div><label>Método de pago</label><select id="salePaymentMethod" onchange="salePaymentChanged()"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="MIXTO">Mixto</option></select></div>
+   <div id="saleMixedBox" class="hidden"><label>Pago mixto</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="saleCashAmount" type="number" min="0" placeholder="Efectivo" oninput="saleCalc()"><input id="saleTransferAmount" type="number" min="0" placeholder="Transferencia" oninput="saleCalc()"></div></div>
+ </div>
+ <div class="toolbar"><button class="btn secondary" onclick="addSaleRow()">+ Agregar sabor</button></div>
+ <div id="saleRows"></div>
+ <div id="saleTotals"></div>
  <div class="toolbar"><button class="btn primary" onclick="saveSale()">GUARDAR VENTA</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
  renderSaleRows();
 }
@@ -736,33 +826,66 @@ function addSaleRow(){
  saleDraft.push({recipe_id:f.recipe_id,cantidad:1});renderSaleRows();
 }
 function renderSaleRows(){
- saleRows.innerHTML=saleDraft.map((x,n)=>{
+ const box=document.getElementById('saleRows');if(!box)return;
+ box.innerHTML=saleDraft.map((x,n)=>{
    const f=finished.find(z=>z.recipe_id===x.recipe_id)||{};
    const price=Number(priceByRecipe(x.recipe_id)?.precio||0);
    return `<div class="recipe-row"><div><label>Sabor</label><select onchange="saleDraft[${n}].recipe_id=this.value;renderSaleRows()">${saleFlavorOptions(x.recipe_id)}</select></div><div><label>Cantidad</label><input type="number" min="1" max="${Number(f.cantidad||0)}" value="${Number(x.cantidad||1)}" oninput="saleDraft[${n}].cantidad=Math.max(1,Number(this.value||1));saleCalc()"></div><div><label>Precio unitario</label><input disabled value="${price?COP(price):'Sin precio'}"></div><div><label>Disponible</label><input disabled value="${fmt(f.cantidad||0)}"></div><button class="btn danger" onclick="saleDraft.splice(${n},1);renderSaleRows()">Quitar</button></div>`;
  }).join('');
  saleCalc();
 }
+function salePaymentChanged(){
+ const method=document.getElementById('salePaymentMethod')?.value||'EFECTIVO';
+ const mixed=document.getElementById('saleMixedBox');
+ if(mixed)mixed.classList.toggle('hidden',method!=='MIXTO');
+ saleCalc();
+}
+function salePaymentAmounts(total){
+ const method=document.getElementById('salePaymentMethod')?.value||'EFECTIVO';
+ if(method==='EFECTIVO')return{method,cash:total,transfer:0,valid:true};
+ if(method==='TRANSFERENCIA')return{method,cash:0,transfer:total,valid:true};
+ const cash=Math.max(0,Number(document.getElementById('saleCashAmount')?.value||0));
+ const transfer=Math.max(0,Number(document.getElementById('saleTransferAmount')?.value||0));
+ return{method,cash,transfer,valid:Math.abs(cash+transfer-total)<0.01};
+}
 function saleCalc(){
- let subtotal=0,units=0,valid=true;
+ let subtotal=0,units=0,stockValid=true;
  for(const x of saleDraft){
-   const f=finished.find(z=>z.recipe_id===x.recipe_id),price=Number(priceByRecipe(x.recipe_id)?.precio||0),q=Number(x.cantidad||0);
-   if(!f||q<1||q>Number(f.cantidad)||price<=0)valid=false;
+   const f=finished.find(z=>z.recipe_id===x.recipe_id);
+   const price=Number(priceByRecipe(x.recipe_id)?.precio||0),q=Number(x.cantidad||0);
+   if(!f||q<1||q>Number(f.cantidad)||price<=0)stockValid=false;
    subtotal+=q*price;units+=q;
  }
- const type=saleDiscountType?.value||'NINGUNO',v=Math.max(0,Number(saleDiscountValue?.value||0));
- let disc=type==='PORCENTAJE'?subtotal*Math.min(v,100)/100:type==='VALOR'?Math.min(v,subtotal):0;
- const shipping=Math.max(0,Number(saleShipping?.value||0)),shippingCost=Math.max(0,Number(saleShippingCost?.value||0));
- const total=Math.max(0,subtotal-disc+shipping);
- if(saleTotals)saleTotals.innerHTML=`<div class="grid"><div class="card"><div class="small">Bolis</div><div class="kpi">${units}</div></div><div class="card"><div class="small">Subtotal</div><div class="kpi">${COP(subtotal)}</div></div><div class="card"><div class="small">Descuento</div><div class="kpi">${COP(disc)}</div></div><div class="card"><div class="small">Envío</div><div class="kpi">${COP(shipping)}</div></div><div class="card"><div class="small">TOTAL</div><div class="kpi">${COP(total)}</div></div></div>${shippingCost>shipping?'<div class="msg err">El costo real del envío es mayor que lo cobrado al cliente; esa diferencia reducirá la ganancia.</div>':''}${valid?'':'<div class="msg err">Configura el precio de cada sabor y revisa que haya inventario suficiente.</div>'}`;
- return {subtotal,disc,total,valid,units,shipping,shippingCost};
+ const discountType=document.getElementById('saleDiscountType')?.value||'NINGUNO';
+ const discountValue=Math.max(0,Number(document.getElementById('saleDiscountValue')?.value||0));
+ const disc=discountType==='PORCENTAJE'?subtotal*Math.min(discountValue,100)/100:discountType==='VALOR'?Math.min(discountValue,subtotal):0;
+ const shipping=Math.max(0,Number(document.getElementById('saleShipping')?.value||0));
+ const shippingCost=Math.max(0,Number(document.getElementById('saleShippingCost')?.value||0));
+ const total=Math.max(0,subtotal-disc+shipping),pay=salePaymentAmounts(total);
+ const totals=document.getElementById('saleTotals');
+ if(totals)totals.innerHTML=`<div class="grid"><div class="card"><div class="small">Bolis</div><div class="kpi">${units}</div></div><div class="card"><div class="small">Subtotal</div><div class="kpi">${COP(subtotal)}</div></div><div class="card"><div class="small">Descuento</div><div class="kpi">${COP(disc)}</div></div><div class="card"><div class="small">Envío</div><div class="kpi">${COP(shipping)}</div></div><div class="card"><div class="small">TOTAL</div><div class="kpi">${COP(total)}</div></div></div>${shippingCost>shipping?'<div class="msg err">El costo real del envío es mayor que lo cobrado al cliente; esa diferencia reducirá la ganancia.</div>':''}${stockValid?'':'<div class="msg err">Configura el precio de cada sabor y revisa que haya inventario suficiente.</div>'}${pay.valid?'':'<div class="msg err">En pago mixto, efectivo + transferencia debe ser igual al total.</div>'}`;
+ return {subtotal,disc,total,valid:stockValid&&pay.valid,units,shipping,shippingCost,pay,discountType,discountValue};
 }
 async function saveSale(){
- const calc=saleCalc();if(!saleDraft.length||!calc.valid)return alert('Revisa precios, cantidades e inventario.');
+ const calc=saleCalc();
+ if(!saleDraft.length||!calc.valid){alert('Revisa precios, cantidades, inventario y forma de pago.');return;}
  const items=saleDraft.map(x=>{const f=finished.find(z=>z.recipe_id===x.recipe_id),price=Number(priceByRecipe(x.recipe_id)?.precio||0);return {recipe_id:x.recipe_id,nombre_sabor:f.nombre_sabor,cantidad:Number(x.cantidad),precio_unitario:price}});
- const {data,error}=await sb.rpc('registrar_venta',{p_cliente_nombre:saleCustomer.value,p_nota:saleNote.value,p_descuento_tipo:saleDiscountType.value,p_descuento_valor:Number(saleDiscountValue.value||0),p_items:items,p_envio_cobrado:calc.shipping,p_costo_envio:calc.shippingCost});
- if(error)return alert(error.message);
- closeModal();await loadAll();alert('Venta registrada. Recibo disponible en Ventas.');
+ const customer=document.getElementById('saleCustomer')?.value||'';
+ const note=document.getElementById('saleNote')?.value||'';
+ const {data,error}=await sb.rpc('registrar_venta',{
+   p_cliente_nombre:customer,
+   p_nota:note,
+   p_descuento_tipo:calc.discountType,
+   p_descuento_valor:calc.discountValue,
+   p_items:items,
+   p_envio_cobrado:calc.shipping,
+   p_costo_envio:calc.shippingCost,
+   p_metodo_pago:calc.pay.method,
+   p_monto_efectivo:calc.pay.cash,
+   p_monto_transferencia:calc.pay.transfer
+ });
+ if(error){alert('No se pudo registrar la venta: '+error.message);return;}
+ closeModal();await loadAll();alert('Venta registrada correctamente.');
 }
 function renderSales(){
  const m=Number(saleMonthFilter.value),y=Number(saleYearFilter.value);
@@ -774,8 +897,62 @@ function renderSales(){
    const its=saleItems.filter(i=>i.sale_id===s.id),units=its.reduce((a,i)=>a+Number(i.cantidad),0);
    const who=[s.cliente_nombre,s.nota].filter(Boolean).join(' · ')||'—';
    const cancelled=s.estado==='ANULADA';
-   return `<tr style="${cancelled?'opacity:.6':''}"><td>${dt(s.fecha)}</td><td>#${String(s.numero_recibo).padStart(5,'0')}</td><td>${who}${cancelled&&s.anulada_motivo?`<br><small>Motivo anulación: ${s.anulada_motivo}</small>`:''}</td><td>${units}</td><td>${COP(s.subtotal)}</td><td>${COP(s.descuento_monto)}</td><td>${COP(s.envio_cobrado||0)}</td><td><b>${COP(s.total)}</b></td><td><span class="status-pill ${cancelled?'status-cancel':'status-active'}">${s.estado}</span></td><td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="showReceipt('${s.id}')">Recibo</button><button class="btn secondary" onclick="shareWhatsAppImage('${s.id}')">WhatsApp imagen</button><button class="btn secondary" onclick="shareEmail('${s.id}')">Correo</button>${cancelled?'':`<button class="btn danger" onclick="openCancelSale('${s.id}',${s.numero_recibo})">Anular</button>`}</div></td></tr>`;
- }).join('')||'<tr><td colspan="10">No hay ventas registradas en este mes.</td></tr>';
+   const pay=s.metodo_pago==='MIXTO'?`Mixto<br><small>${COP(s.monto_efectivo)} efectivo · ${COP(s.monto_transferencia)} transferencia</small>`:(s.metodo_pago==='TRANSFERENCIA'?'Transferencia':s.metodo_pago==='EFECTIVO'?'Efectivo':'—');
+   return `<tr style="${cancelled?'opacity:.6':''}"><td>${dt(s.fecha)}</td><td>#${String(s.numero_recibo).padStart(5,'0')}</td><td>${who}${cancelled&&s.anulada_motivo?`<br><small>Motivo anulación: ${s.anulada_motivo}</small>`:''}</td><td>${units}</td><td>${pay}</td><td>${COP(s.subtotal)}</td><td>${COP(s.descuento_monto)}</td><td>${COP(s.envio_cobrado||0)}</td><td><b>${COP(s.total)}</b></td><td><span class="status-pill ${cancelled?'status-cancel':'status-active'}">${s.estado}</span></td><td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="showReceipt('${s.id}')">Recibo</button><button class="btn secondary" onclick="shareWhatsAppImage('${s.id}')">WhatsApp imagen</button><button class="btn secondary" onclick="shareEmail('${s.id}')">Correo</button>${cancelled?'':`<button class="btn danger" onclick="openCancelSale('${s.id}',${s.numero_recibo})">Anular</button>`}</div></td></tr>`;
+ }).join('')||'<tr><td colspan="11">No hay ventas registradas en este mes.</td></tr>';
+ renderMonthlyFinance();
+}
+function salesMonthRange(){
+ const m=Number(document.getElementById('saleMonthFilter')?.value||0),y=Number(document.getElementById('saleYearFilter')?.value||new Date().getFullYear());
+ return {start:new Date(y,m,1),end:new Date(y,m+1,1)};
+}
+function signedMovementValue(m){
+ const q=Number(m.cantidad||0),v=Math.abs(Number(m.valor||0));
+ return q<0?-v:q>0?v:0;
+}
+function monthlyProductFinance(){
+ const {start,end}=salesMonthRange(),by={};
+ products.forEach(p=>by[p.id]={p,openingQty:0,openingValue:0,purchaseQty:0,purchaseValue:0,usedQty:0,usedValue:0,closingQty:0,closingValue:0});
+ movements.forEach(m=>{
+   const d=new Date(m.fecha),x=by[m.product_id];if(!x)return;
+   const q=Number(m.cantidad||0),sv=signedMovementValue(m);
+   if(d<start){x.openingQty+=q;x.openingValue+=sv}
+   if(d>=start&&d<end){
+     if(String(m.tipo||'').toLowerCase().includes('compra')){x.purchaseQty+=Math.max(q,0);x.purchaseValue+=Math.abs(Number(m.valor||0))}
+     if(q<0){x.usedQty+=Math.abs(q);x.usedValue+=Math.abs(Number(m.valor||0))}
+   }
+   if(d<end){x.closingQty+=q;x.closingValue+=sv}
+ });
+ return Object.values(by);
+}
+function renderMonthlyFinance(){
+ const rows=monthlyProductFinance(),{start,end}=salesMonthRange();
+ const active=sales.filter(s=>s.estado==='ACTIVA'&&new Date(s.fecha)>=start&&new Date(s.fecha)<end);
+ const opening=rows.reduce((a,x)=>a+Math.max(0,x.openingValue),0);
+ const purchases=rows.reduce((a,x)=>a+x.purchaseValue,0);
+ const closing=rows.reduce((a,x)=>a+Math.max(0,x.closingValue),0);
+ const collected=active.reduce((a,x)=>a+Number(x.total||0),0);
+ const cash=active.reduce((a,x)=>a+Number(x.monto_efectivo||0),0);
+ const transfer=active.reduce((a,x)=>a+Number(x.monto_transferencia||0),0);
+ if(document.getElementById('mOpeningInventory'))mOpeningInventory.textContent=COP(opening);
+ if(document.getElementById('mPurchases'))mPurchases.textContent=COP(purchases);
+ if(document.getElementById('mCollected'))mCollected.textContent=COP(collected);
+ if(document.getElementById('mClosingInventory'))mClosingInventory.textContent=COP(closing);
+ if(document.getElementById('mCash'))mCash.textContent=COP(cash);
+ if(document.getElementById('mTransfer'))mTransfer.textContent=COP(transfer);
+}
+function openMonthlyInvestmentDetail(){
+ const rows=monthlyProductFinance().filter(x=>x.openingQty||x.purchaseQty||x.usedQty||x.closingQty);
+ const html=rows.sort((a,b)=>(b.purchaseValue+b.openingValue)-(a.purchaseValue+a.openingValue)).map(x=>`<tr>
+ <td><b>${x.p.nombre}</b></td>
+ <td>${fmt(Math.max(0,x.openingQty))} ${x.p.unidad_base}<br><small>${COP(Math.max(0,x.openingValue))}</small></td>
+ <td>${fmt(x.purchaseQty)} ${x.p.unidad_base}<br><small>${COP(x.purchaseValue)}</small></td>
+ <td>${fmt(x.usedQty)} ${x.p.unidad_base}<br><small>${COP(x.usedValue)}</small></td>
+ <td>${fmt(Math.max(0,x.closingQty))} ${x.p.unidad_base}<br><small>${COP(Math.max(0,x.closingValue))}</small></td>
+ </tr>`).join('');
+ showModal(`<h2>Detalle de inversión del mes</h2><div class="small">“Venía” es lo que ya tenías antes de comenzar el mes. “Compraste” son las compras nuevas. “Usaste” son las salidas del inventario. “Quedó” pasa al siguiente mes.</div>
+ <div class="tableScroll" style="margin-top:14px"><table><thead><tr><th>Insumo</th><th>Venía del mes anterior</th><th>Compraste este mes</th><th>Usaste</th><th>Quedó</th></tr></thead><tbody>${html||'<tr><td colspan="5">Sin movimientos.</td></tr>'}</tbody></table></div>
+ <div class="toolbar"><button class="btn secondary" onclick="closeModal()">Cerrar</button></div>`);
 }
 function openCancelSale(id,number){
  showModal(`<h2>Anular venta #${String(number).padStart(5,'0')}</h2><div class="msg err"><b>Los bolis de esta venta volverán automáticamente al inventario.</b><br>La venta no se borrará: quedará marcada como ANULADA para conservar el historial contable.</div><label>Motivo</label><input id="cancelReason" placeholder="Ej. Cliente canceló el pedido"><div class="toolbar"><button class="btn danger" onclick="cancelSale('${id}')">Anular venta y devolver inventario</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
@@ -798,7 +975,7 @@ function showReceipt(id){
  const its=saleItems.filter(i=>i.sale_id===id),b=businessSettings||{};
  const rows=its.map(i=>`<tr><td>${i.nombre_sabor}<br><small>${i.cantidad} × ${COP(i.precio_unitario)}</small></td><td style="text-align:right">${COP(i.subtotal)}</td></tr>`).join('');
  showModal(`<div id="receiptPrintArea"><div class="receipt"><div class="receipt-brand">${boliMark()} ${b.nombre_empresa||'BERTELITOS'}</div><div class="receipt-sub">Bolis gourmet · Recibo de venta</div>
- <div class="receipt-meta"><b>Recibo:</b> #${String(sale.numero_recibo).padStart(5,'0')}<br><b>Fecha:</b> ${dt(sale.fecha)}${sale.cliente_nombre?`<br><b>Cliente:</b> ${sale.cliente_nombre}`:''}${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}${sale.estado==='ANULADA'?`<br><span class="status-pill status-cancel">ANULADA</span>${sale.anulada_motivo?` · ${sale.anulada_motivo}`:''}`:''}</div>
+ <div class="receipt-meta"><b>Recibo:</b> #${String(sale.numero_recibo).padStart(5,'0')}<br><b>Fecha:</b> ${dt(sale.fecha)}${sale.cliente_nombre?`<br><b>Cliente:</b> ${sale.cliente_nombre}`:''}${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}<br><b>Pago:</b> ${sale.metodo_pago==='MIXTO'?`Mixto · ${COP(sale.monto_efectivo)} efectivo + ${COP(sale.monto_transferencia)} transferencia`:sale.metodo_pago||'—'}${sale.estado==='ANULADA'?`<br><span class="status-pill status-cancel">ANULADA</span>${sale.anulada_motivo?` · ${sale.anulada_motivo}`:''}`:''}</div>
  <table><tbody>${rows}<tr><td>Subtotal</td><td style="text-align:right">${COP(sale.subtotal)}</td></tr>${Number(sale.descuento_monto)>0?`<tr><td>Descuento</td><td style="text-align:right">-${COP(sale.descuento_monto)}</td></tr>`:''}${Number(sale.envio_cobrado||0)>0?`<tr><td>Envío</td><td style="text-align:right">${COP(sale.envio_cobrado)}</td></tr>`:''}<tr><td style="font-size:20px;font-weight:900;border-bottom:0">TOTAL</td><td style="text-align:right;font-size:20px;font-weight:900;border-bottom:0">${COP(sale.total)}</td></tr></tbody></table>
  <div class="receipt-footer"><b>${b.mensaje_recibo||'¡Gracias por elegir BERTELITOS!'}</b><div class="receipt-social">${businessLine()}</div></div>
  <div class="toolbar no-print" style="justify-content:center;margin-top:20px"><button class="btn primary" onclick="window.print()">Imprimir / Guardar PDF</button><button class="btn secondary" onclick="downloadReceiptPNG('${sale.id}')">Descargar imagen</button><button class="btn secondary" onclick="downloadReceiptPDF('${sale.id}')">Descargar PDF</button><button class="btn secondary" onclick="shareWhatsAppImage('${sale.id}')">WhatsApp imagen</button><button class="btn secondary" onclick="shareEmail('${sale.id}')">Correo</button><button class="btn secondary" onclick="shareReceiptPDF('${sale.id}')">Compartir PDF</button><button class="btn secondary" onclick="closeModal()">Cerrar</button></div></div></div>`);
@@ -809,7 +986,7 @@ function receiptText(id){
  const its=saleItems.filter(i=>i.sale_id===id),b=businessSettings||{};
  let text=`${b.nombre_empresa||'BERTELITOS'}\nRecibo #${String(sale.numero_recibo).padStart(5,'0')}\nFecha: ${dt(sale.fecha)}\n`;
  if(sale.cliente_nombre)text+=`Cliente: ${sale.cliente_nombre}\n`;
- if(sale.nota)text+=`Nota: ${sale.nota}\n`;
+ if(sale.nota)text+=`Nota: ${sale.nota}\n`; text+=`Pago: ${sale.metodo_pago==='MIXTO'?`Mixto (${COP(sale.monto_efectivo)} efectivo + ${COP(sale.monto_transferencia)} transferencia)`:sale.metodo_pago||'—'}\n`;
  text+='\n';
  its.forEach(i=>text+=`${i.nombre_sabor}: ${i.cantidad} x ${COP(i.precio_unitario)} = ${COP(i.subtotal)}\n`);
  text+=`\nSubtotal: ${COP(sale.subtotal)}\n`;
@@ -820,6 +997,161 @@ function receiptText(id){
  return text;
 }
 
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ===== CALCULADORA DE RECETAS ===== */
+function renderQuickCalculations(){
+ const body=document.getElementById('quickCalcBody'),k=document.getElementById('kQuickCalcs');if(!body)return;
+ if(k)k.textContent=quickCalculations.length;
+ body.innerHTML=quickCalculations.map(c=>`<tr>
+  <td>${dt(c.created_at)}</td><td><b>${esc(c.nombre)}</b></td>
+  <td>${fmt(c.rendimiento)} bolis</td><td>${COP(c.costo_total)}</td><td>${COP(c.costo_unitario)}</td>
+  <td>${COP(c.precio_venta)}</td><td>${COP(c.ganancia_unitaria)}</td>
+  <td><button class="btn secondary" onclick="openQuickCalc('${c.id}')">Abrir</button> <button class="btn danger" onclick="deleteQuickCalc('${c.id}')">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="8">No hay cálculos guardados.</td></tr>';
+}
+function calcRecipeOptions(selected=''){return recipes.map(r=>`<option value="${r.id}" ${r.id===selected?'selected':''}>${esc(r.nombre)}</option>`).join('')}
+function ingredientRowsForRecipe(recipeId){
+ return recipeIngredients.filter(x=>x.recipe_id===recipeId).map(x=>{
+   const p=productById(x.product_id);
+   return {nombre:x.nombre_ingrediente||p?.nombre||'Ingrediente',cantidad:Number(x.cantidad||0),unidad:x.unidad||p?.unidad_base||'',precio_compra:0,contenido_compra:0,unidad_compra:x.unidad||p?.unidad_base||''};
+ });
+}
+function openQuickCalc(id=''){
+ const c=quickCalculations.find(x=>x.id===id);
+ const selectedRecipe=c?.recipe_id||c?.ingredientes?.[0]?._recipe_id||recipes[0]?.id||'';
+ quickCalcDraft=c?.ingredientes?.length?(c.ingredientes||[]).map(x=>({...x})):ingredientRowsForRecipe(selectedRecipe);
+ const rr=recipes.find(x=>x.id===selectedRecipe);
+ showModal(`<h2>Calculadora por receta</h2>
+ <div class="small">Escoge el boli. Las cantidades de la receta aparecen automáticamente; tú solo escribes cuánto pagaste y cuánto traía cada presentación.</div>
+ <div class="formgrid">
+ <div><label>Boli / receta</label><select id="qcRecipe" onchange="quickCalcRecipeChanged()">${calcRecipeOptions(selectedRecipe)}</select></div>
+ <div><label>Bolis sugeridos por receta</label><input id="qcSuggested" disabled value="${Number(rr?.rendimiento_sugerido||0)}"></div>
+ <div><label>¿Cuántos bolis te salieron realmente?</label><input id="qcYield" type="number" min="1" value="${Number(c?.rendimiento||rr?.rendimiento_sugerido||1)}" oninput="renderQuickCalcSummary()"></div>
+ <div><label>Precio de venta por boli (opcional)</label><input id="qcSalePrice" type="number" min="0" value="${Number(c?.precio_venta||0)}" oninput="renderQuickCalcSummary()"></div>
+ </div>
+ <h3>Ingredientes de la receta</h3><div id="quickCalcRows"></div>
+ <div id="quickCalcSummary" class="card"></div>
+ <div class="toolbar"><button class="btn primary" onclick="saveQuickCalc('${id}')">Guardar cálculo</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+ renderQuickCalcRows();
+}
+function quickCalcRecipeChanged(){
+ const id=document.getElementById('qcRecipe').value,r=recipes.find(x=>x.id===id);
+ quickCalcDraft=ingredientRowsForRecipe(id);
+ document.getElementById('qcSuggested').value=Number(r?.rendimiento_sugerido||0);
+ document.getElementById('qcYield').value=Number(r?.rendimiento_sugerido||1);
+ renderQuickCalcRows();
+}
+function setQuickCalcPurchase(i,k,v){quickCalcDraft[i][k]=Number(v||0);renderQuickCalcSummary()}
+function quickPurchaseFactor(unit){
+ const u=String(unit||'').toLowerCase();
+ if(u==='kg')return 1000;if(u==='l'||u==='litro'||u==='litros')return 1000;if(u==='lb')return 453.59237;return 1;
+}
+function quickIngredientCost(x){
+ const bought=Number(x.contenido_compra||0)*quickPurchaseFactor(x.unidad_compra);
+ const needed=Number(x.cantidad||0)*quickPurchaseFactor(x.unidad);
+ return bought>0?Number(x.precio_compra||0)*(needed/bought):0;
+}
+function renderQuickCalcRows(){
+ const box=document.getElementById('quickCalcRows');if(!box)return;
+ box.innerHTML=quickCalcDraft.map((x,i)=>`<div class="card" style="margin-bottom:10px">
+ <div style="font-weight:900;font-size:16px">${esc(x.nombre)}</div>
+ <div class="small" style="margin:4px 0 10px">La receta usa <b>${fmt(x.cantidad)} ${esc(x.unidad)}</b></div>
+ <div class="formgrid">
+   <div><label>¿Cuánto pagaste?</label><input type="number" min="0" placeholder="$" value="${Number(x.precio_compra||0)||''}" oninput="setQuickCalcPurchase(${i},'precio_compra',this.value)"></div>
+   <div><label>¿Cuánto trae lo que compraste?</label><input type="number" min="0" placeholder="Cantidad" value="${Number(x.contenido_compra||0)||''}" oninput="setQuickCalcPurchase(${i},'contenido_compra',this.value)"></div>
+   <div><label>Presentación comprada</label><select onchange="quickCalcDraft[${i}].unidad_compra=this.value;renderQuickCalcSummary()">
+    <option value="${esc(x.unidad)}">${esc(x.unidad)}</option>
+    ${['g','kg','ml','L','unidad','lb'].filter(u=>u!==x.unidad).map(u=>`<option value="${u}" ${u===x.unidad_compra?'selected':''}>${u}</option>`).join('')}
+   </select></div>
+ </div></div>`).join('');
+ renderQuickCalcSummary();
+}
+function renderQuickCalcSummary(){
+ const el=document.getElementById('quickCalcSummary');if(!el)return;
+ const total=quickCalcDraft.reduce((a,x)=>a+quickIngredientCost(x),0);
+ const yieldN=Math.max(1,Number(document.getElementById('qcYield')?.value||1));
+ const unit=total/yieldN,price=Number(document.getElementById('qcSalePrice')?.value||0),gain=price-unit,margin=price?gain/price*100:0;
+ el.innerHTML=`<h3 style="margin-top:0">Resultado</h3><div class="grid">
+ <div><div class="small">Costo de toda la receta</div><div class="kpi">${COP(total)}</div></div>
+ <div><div class="small">Bolis que te salieron</div><div class="kpi">${fmt(yieldN)}</div></div>
+ <div><div class="small">Cada boli te salió en</div><div class="kpi">${COP(unit)}</div></div>
+ <div><div class="small">Ganancia por boli</div><div class="kpi">${price?COP(gain):'—'}</div></div>
+ </div>${price?`<div class="small" style="margin-top:10px">Margen estimado: <b>${fmt(margin)}%</b></div>`:''}`;
+}
+async function saveQuickCalc(id=''){
+ const recipeId=document.getElementById('qcRecipe').value,r=recipes.find(x=>x.id===recipeId);if(!r)return;
+ const rendimiento=Math.max(1,Number(document.getElementById('qcYield').value||1)),precio=Number(document.getElementById('qcSalePrice').value||0);
+ const costo=quickCalcDraft.reduce((a,x)=>a+quickIngredientCost(x),0);
+ const row={user_id:user.id,nombre:r.nombre,sabor:r.nombre,rendimiento,precio_venta:precio,ingredientes:quickCalcDraft,costo_total:costo,costo_unitario:costo/rendimiento,ganancia_unitaria:precio?precio-(costo/rendimiento):0,updated_at:new Date().toISOString()};
+ /* recipe_id is stored inside ingredientes compatibility metadata until DB column exists */
+ row.ingredientes=quickCalcDraft.map(x=>({...x,_recipe_id:recipeId}));
+ const q=id?sb.from('quick_calculations').update(row).eq('id',id):sb.from('quick_calculations').insert(row);
+ const {error}=await q;if(error)return alert(error.message);closeModal();await loadAll();
+}
+async function deleteQuickCalc(id){if(!confirm('¿Eliminar este cálculo guardado?'))return;const {error}=await sb.from('quick_calculations').delete().eq('id',id);if(error)return alert(error.message);await loadAll()}
+
+/* ===== RECIBOS LIBRES ===== */
+function setupFreeReceiptFilters(){
+ const m=document.getElementById('freeReceiptMonth'),y=document.getElementById('freeReceiptYear');if(!m||!y)return;
+ const now=new Date(),mv=m.value||String(now.getMonth()+1),yv=y.value||String(now.getFullYear());
+ m.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${new Date(2020,i,1).toLocaleString('es',{month:'long'})}</option>`).join('');
+ const years=[...new Set([now.getFullYear(),...freeReceipts.map(r=>new Date(r.fecha).getFullYear())])].sort((a,b)=>b-a);
+ y.innerHTML=years.map(v=>`<option>${v}</option>`).join('');m.value=mv;y.value=yv;
+}
+function renderFreeReceipts(){
+ const body=document.getElementById('freeReceiptBody');if(!body)return;
+ const m=Number(document.getElementById('freeReceiptMonth')?.value||new Date().getMonth()+1),y=Number(document.getElementById('freeReceiptYear')?.value||new Date().getFullYear());
+ const rows=freeReceipts.filter(r=>{const d=new Date(r.fecha);return d.getMonth()+1===m&&d.getFullYear()===y});
+ body.innerHTML=rows.map(r=>`<tr><td>${dt(r.fecha)}</td><td>#L${String(r.numero_recibo).padStart(5,'0')}</td><td>${esc(r.cliente_nombre||'')}</td><td>${COP(r.total)}</td><td>${esc(r.estado)}</td>
+ <td><button class="btn secondary" onclick="viewFreeReceipt('${r.id}')">Ver</button> <button class="btn secondary" onclick="openFreeReceipt('${r.id}')">Editar</button> <button class="btn secondary" onclick="shareFreeReceiptImage('${r.id}')">WhatsApp imagen</button> ${r.estado==='ACTIVO'?`<button class="btn danger" onclick="cancelFreeReceipt('${r.id}')">Anular</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6">No hay recibos libres en este mes.</td></tr>';
+}
+function openFreeReceipt(id=''){
+ const r=freeReceipts.find(x=>x.id===id);freeReceiptDraft=(r?.items||[]).map(x=>({...x}));
+ if(!freeReceiptDraft.length)freeReceiptDraft=[{concepto:'',cantidad:1,precio:0}];
+ showModal(`<h2>${r?'Editar':'Nuevo'} recibo libre</h2><div class="small">Este recibo se guarda, pero no modifica inventario ni ganancias.</div>
+ <div class="formgrid"><div><label>Cliente</label><input id="frClient" value="${esc(r?.cliente_nombre||'')}"></div><div><label>Contacto</label><input id="frContact" value="${esc(r?.cliente_contacto||'')}"></div><div style="grid-column:1/-1"><label>Nota</label><input id="frNote" value="${esc(r?.nota||'')}"></div></div>
+ <h3>Conceptos</h3><div id="freeReceiptRows"></div><div class="toolbar"><button class="btn secondary" onclick="addFreeReceiptRow()">+ Línea</button></div>
+ <div class="formgrid"><div><label>Descuento</label><input id="frDiscount" type="number" min="0" value="${Number(r?.descuento||0)}" oninput="renderFreeReceiptSummary()"></div><div><label>Envío</label><input id="frShipping" type="number" min="0" value="${Number(r?.envio||0)}" oninput="renderFreeReceiptSummary()"></div>
+ <div><label>Método de pago</label><select id="frPaymentMethod" onchange="freeReceiptPaymentChanged()"><option value="EFECTIVO" ${r?.metodo_pago==='EFECTIVO'?'selected':''}>Efectivo</option><option value="TRANSFERENCIA" ${r?.metodo_pago==='TRANSFERENCIA'?'selected':''}>Transferencia</option><option value="MIXTO" ${r?.metodo_pago==='MIXTO'?'selected':''}>Mixto</option></select></div>
+ <div id="frMixedBox" class="${r?.metodo_pago==='MIXTO'?'':'hidden'}"><label>Pago mixto</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="frCashAmount" type="number" min="0" value="${Number(r?.monto_efectivo||0)}" placeholder="Efectivo"><input id="frTransferAmount" type="number" min="0" value="${Number(r?.monto_transferencia||0)}" placeholder="Transferencia"></div></div></div>
+ <div id="freeReceiptSummary" class="card"></div><div class="toolbar"><button class="btn primary" onclick="saveFreeReceipt('${id}')">Guardar recibo</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+ renderFreeReceiptRows();
+}
+function addFreeReceiptRow(){freeReceiptDraft.push({concepto:'',cantidad:1,precio:0});renderFreeReceiptRows()}
+function setFreeReceiptRow(i,k,v){freeReceiptDraft[i][k]=k==='concepto'?v:Number(v||0);renderFreeReceiptSummary()}
+function removeFreeReceiptRow(i){freeReceiptDraft.splice(i,1);renderFreeReceiptRows()}
+function renderFreeReceiptRows(){const box=document.getElementById('freeReceiptRows');if(!box)return;box.innerHTML=freeReceiptDraft.map((x,i)=>`<div class="recipe-row"><input placeholder="Concepto / producto" value="${esc(x.concepto)}" oninput="setFreeReceiptRow(${i},'concepto',this.value)"><input type="number" min="0" placeholder="Cantidad" value="${Number(x.cantidad||0)}" oninput="setFreeReceiptRow(${i},'cantidad',this.value)"><input type="number" min="0" placeholder="Precio unitario" value="${Number(x.precio||0)}" oninput="setFreeReceiptRow(${i},'precio',this.value)"><button class="btn danger" onclick="removeFreeReceiptRow(${i})">×</button></div>`).join('');renderFreeReceiptSummary()}
+function freeReceiptTotals(){const subtotal=freeReceiptDraft.reduce((a,x)=>a+Number(x.cantidad||0)*Number(x.precio||0),0),descuento=Number(document.getElementById('frDiscount')?.value||0),envio=Number(document.getElementById('frShipping')?.value||0);return{subtotal,descuento,envio,total:Math.max(0,subtotal-descuento+envio)}}
+function renderFreeReceiptSummary(){const el=document.getElementById('freeReceiptSummary');if(!el)return;const t=freeReceiptTotals();el.innerHTML=`Subtotal: <b>${COP(t.subtotal)}</b> · Descuento: <b>${COP(t.descuento)}</b> · Envío: <b>${COP(t.envio)}</b><div class="kpi" style="margin-top:8px">TOTAL ${COP(t.total)}</div>`}
+function freeReceiptPaymentChanged(){
+ const method=document.getElementById('frPaymentMethod')?.value||'EFECTIVO';
+ document.getElementById('frMixedBox')?.classList.toggle('hidden',method!=='MIXTO');
+}
+async function saveFreeReceipt(id=''){
+ if(!freeReceiptDraft.length||!freeReceiptDraft.some(x=>x.concepto.trim()))return alert('Agrega al menos un concepto.');
+ const t=freeReceiptTotals(),method=document.getElementById('frPaymentMethod')?.value||'EFECTIVO';
+ let cash=0,transfer=0;
+ if(method==='EFECTIVO')cash=t.total;
+ else if(method==='TRANSFERENCIA')transfer=t.total;
+ else{
+   cash=Number(document.getElementById('frCashAmount')?.value||0);transfer=Number(document.getElementById('frTransferAmount')?.value||0);
+   if(Math.abs(cash+transfer-t.total)>.01)return alert('En pago mixto, efectivo + transferencia debe ser igual al total.');
+ }
+ const row={user_id:user.id,cliente_nombre:document.getElementById('frClient').value.trim(),cliente_contacto:document.getElementById('frContact').value.trim(),nota:document.getElementById('frNote').value.trim(),items:freeReceiptDraft,subtotal:t.subtotal,descuento:t.descuento,envio:t.envio,total:t.total,metodo_pago:method,monto_efectivo:cash,monto_transferencia:transfer,updated_at:new Date().toISOString()};
+ const q=id?sb.from('free_receipts').update(row).eq('id',id):sb.from('free_receipts').insert(row);const {error}=await q;if(error)return alert(error.message);closeModal();await loadAll();
+}
+async function cancelFreeReceipt(id){if(!confirm('¿Anular este recibo libre? Quedará guardado como ANULADO.'))return;const {error}=await sb.from('free_receipts').update({estado:'ANULADO',updated_at:new Date().toISOString()}).eq('id',id);if(error)return alert(error.message);await loadAll()}
+function freeReceiptImageHTML(id){
+ const r=freeReceipts.find(x=>x.id===id);if(!r)return '';const b=businessSettings||{},items=(r.items||[]).map(i=>`<div class="receiptImageItem"><div><div class="receiptImageItemName">${esc(i.concepto)}</div><div class="receiptImageItemSmall">${fmt(i.cantidad)} × ${COP(i.precio)}</div></div><div style="font-weight:800">${COP(Number(i.cantidad)*Number(i.precio))}</div></div>`).join('');
+ const social=[b.telefono?`WhatsApp: ${esc(b.telefono)}`:'',b.instagram?`Instagram: ${esc(b.instagram)}`:'',b.facebook?`Facebook: ${esc(b.facebook)}`:'',b.tiktok?`TikTok: ${esc(b.tiktok)}`:'',[b.direccion,b.ciudad].filter(Boolean).map(esc).join(' · ')].filter(Boolean).join('<br>');
+ return `<div class="receiptImageCard"><div class="receiptImageBrand"><span class="receiptImageLogo"><span class="tie"></span><span class="tube"></span></span>${esc(b.nombre_empresa||'BERTELITOS')}</div><div class="receiptImageSub">Bolis gourmet · Recibo libre</div><div class="receiptImageMeta"><b>Recibo:</b> #L${String(r.numero_recibo).padStart(5,'0')}<br><b>Fecha:</b> ${dt(r.fecha)}${r.cliente_nombre?`<br><b>Cliente:</b> ${esc(r.cliente_nombre)}`:''}${r.nota?`<br><b>Nota:</b> ${esc(r.nota)}`:''}<br><b>Pago:</b> ${r.metodo_pago==='MIXTO'?`Mixto · ${COP(r.monto_efectivo)} efectivo + ${COP(r.monto_transferencia)} transferencia`:r.metodo_pago||'—'}${r.estado==='ANULADO'?'<br><b>ESTADO: ANULADO</b>':''}</div><div class="receiptImageItems">${items}</div><div class="receiptImageTotals"><div class="receiptImageTotalRow"><span>Subtotal</span><b>${COP(r.subtotal)}</b></div>${Number(r.descuento)>0?`<div class="receiptImageTotalRow"><span>Descuento</span><b>-${COP(r.descuento)}</b></div>`:''}${Number(r.envio)>0?`<div class="receiptImageTotalRow"><span>Envío</span><b>${COP(r.envio)}</b></div>`:''}<div class="receiptImageTotalRow receiptImageGrand"><span>TOTAL</span><span>${COP(r.total)}</span></div></div><div class="receiptImageThanks">${esc(b.mensaje_recibo||'¡Gracias por elegir BERTELITOS!')}</div><div class="receiptImageSocial">${social}</div><div class="receiptImageFooter">Recibo libre · No modifica inventario</div></div>`;
+}
+async function generateFreeReceiptPNG(id){const stage=document.getElementById('receiptImageStage');stage.innerHTML=freeReceiptImageHTML(id);const card=stage.querySelector('.receiptImageCard');await new Promise(r=>setTimeout(r,80));const canvas=await html2canvas(card,{scale:2,backgroundColor:'#fffdf8',useCORS:true,logging:false});return await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1))}
+async function shareFreeReceiptImage(id){const r=freeReceipts.find(x=>x.id===id);if(!r)return;try{const blob=await generateFreeReceiptPNG(id),file=new File([blob],`BERTELITOS_Recibo_L${String(r.numero_recibo).padStart(5,'0')}.png`,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:`Recibo BERTELITOS #L${String(r.numero_recibo).padStart(5,'0')}`,text:'Gracias por tu compra en BERTELITOS.',files:[file]})}else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);alert('Guardé el recibo como imagen para que lo envíes por WhatsApp.')}}catch(e){if(e?.name!=='AbortError')alert(e.message)}}
+async function downloadFreeReceiptPNG(id){const r=freeReceipts.find(x=>x.id===id);if(!r)return;const blob=await generateFreeReceiptPNG(id),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`BERTELITOS_Recibo_L${String(r.numero_recibo).padStart(5,'0')}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200)}
+async function downloadFreeReceiptPDF(id){const r=freeReceipts.find(x=>x.id===id);if(!r)return;const blob=await generateFreeReceiptPNG(id),url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'}),w=170,h=img.height*w/img.width;pdf.addImage(img,'PNG',20,15,w,h);pdf.save(`BERTELITOS_Recibo_L${String(r.numero_recibo).padStart(5,'0')}.pdf`);URL.revokeObjectURL(url)};img.src=url}
+function viewFreeReceipt(id){const r=freeReceipts.find(x=>x.id===id);if(!r)return;showModal(`<div id="freeReceiptPreview">${freeReceiptImageHTML(id)}</div><div class="toolbar"><button class="btn primary" onclick="downloadFreeReceiptPNG('${id}')">Descargar imagen</button><button class="btn secondary" onclick="downloadFreeReceiptPDF('${id}')">PDF</button><button class="btn secondary" onclick="shareFreeReceiptImage('${id}')">WhatsApp imagen</button><button class="btn secondary" onclick="closeModal()">Cerrar</button></div>`)}
 function receiptImageHTML(id){
  const sale=sales.find(x=>x.id===id);if(!sale)return '';
  const its=saleItems.filter(i=>i.sale_id===id),b=businessSettings||{};
@@ -842,7 +1174,7 @@ function receiptImageHTML(id){
      <b>Recibo:</b> #${String(sale.numero_recibo).padStart(5,'0')}<br>
      <b>Fecha:</b> ${dt(sale.fecha)}
      ${sale.cliente_nombre?`<br><b>Cliente:</b> ${sale.cliente_nombre}`:''}
-     ${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}
+     ${sale.nota?`<br><b>Nota:</b> ${sale.nota}`:''}<br><b>Pago:</b> ${sale.metodo_pago==='MIXTO'?`Mixto · ${COP(sale.monto_efectivo)} efectivo + ${COP(sale.monto_transferencia)} transferencia`:sale.metodo_pago||'—'}
    </div>
    <div class="receiptImageItems">${items}</div>
    <div class="receiptImageTotals">
@@ -997,7 +1329,7 @@ async function saveBusinessSettings(){
  closeModal();await loadAll();
 }
 async function exportCloudBackup(){
- const payload={app:'BERTELITOS · Bolis Control Online',version:'1.5',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,businessSettings}};
+ const payload={app:'BERTELITOS · Bolis Control Online',version:'1.9',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,businessSettings}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Bolis_Control_Online_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);msg(backupMsg,'Respaldo generado. Revisa Descargas.');
 }
 
