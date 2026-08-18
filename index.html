@@ -339,7 +339,7 @@ input,select{min-height:44px}
         <div class="toolbar"><button class="btn secondary" onclick="addExtra()">+ Topping / relleno</button></div>
         <div id="extrasBox"></div>
         <div id="productionCalc"></div>
-        <div class="toolbar"><button class="btn primary" onclick="saveProduction()">GUARDAR PRODUCCIÓN</button></div>
+        <div class="toolbar"><button id="saveProductionBtn" class="btn primary" onclick="saveProduction()">GUARDAR PRODUCCIÓN</button></div>
       </div>
       <h3>Inventario de bolis hechos</h3>
       <div class="sub">Se actualiza automáticamente al producir y al registrar ventas.</div>
@@ -351,13 +351,13 @@ input,select{min-height:44px}
       <div class="toolbar"><button class="btn primary" onclick="openManualFinishedAdd()">+ Agregar bolis hechos</button></div>
       <h3>Inventario actual y precio de venta</h3>
       <table><thead><tr><th>Sabor</th><th>Cantidad</th><th>Precio</th><th>Acciones</th></tr></thead><tbody id="finishedBody"></tbody></table><h3 style="margin-top:24px">Entradas manuales</h3><div class="small">Bolis agregados sin descontar ingredientes.</div><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="manualFinishedBody"></tbody></table>
-      <h3 style="margin-top:24px">Bolis retirados / pérdidas</h3><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="lossesBody"></tbody></table>
+      <h3 style="margin-top:24px">Bolis retirados / pérdidas</h3><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="lossesBody"></tbody></table>
       <h3 style="margin-top:24px">Producción por mes</h3>
       <div class="formgrid">
         <div><label>Mes</label><select id="monthFilter" onchange="renderFinished()"></select></div>
         <div><label>Año</label><select id="yearFilter" onchange="renderFinished()"></select></div>
       </div>
-      <table style="margin-top:12px"><thead><tr><th>Fecha</th><th>Receta</th><th>Lotes</th><th>Sugeridos</th><th>Reales</th><th>Costo</th></tr></thead><tbody id="productionHistory"></tbody></table>
+      <table style="margin-top:12px"><thead><tr><th>Fecha</th><th>Receta</th><th>Lotes</th><th>Sugeridos</th><th>Reales</th><th>Costo</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="productionHistory"></tbody></table>
     </section>
 
     <section id="ventas" class="section">
@@ -471,7 +471,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let session=null,user=null;
 let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],finishedManualAdditions=[],businessSettings=null;
-let extras=[],recipeDraft=null,saleDraft=[],quickCalculations=[],freeReceipts=[],quickCalcDraft=[],freeReceiptDraft=[];
+let extras=[],recipeDraft=null,saleDraft=[],quickCalculations=[],freeReceipts=[],quickCalcDraft=[],freeReceiptDraft=[],savingProduction=false;
 
 const COP=n=>'$'+Math.round(Number(n||0)).toLocaleString('es-CO');
 const fmt=n=>Number(n||0).toLocaleString('es-CO',{maximumFractionDigits:2});
@@ -740,21 +740,37 @@ function calculateProduction(){
  productionCalc.innerHTML=`<table><thead><tr><th>Producto</th><th>Necesario</th><th>Disponible</th><th>Estado</th><th>Costo</th></tr></thead><tbody>${d.cons.map(c=>{const iv=invByProduct(c.p.id)||{cantidad:0};return `<tr><td>${c.p.nombre}${c.type==='EXTRA'?' · Extra':''}</td><td>${fmt(c.qty)} ${c.p.unidad_base}</td><td>${fmt(iv.cantidad)} ${c.p.unidad_base}</td><td class="${Number(iv.cantidad)>=c.qty?'good':'bad'}">${Number(iv.cantidad)>=c.qty?'Disponible':'Falta'}</td><td>${COP(c.cost)}</td></tr>`}).join('')}</tbody></table><div class="grid" style="margin-top:12px"><div class="card"><div class="small">Costo total</div><div class="kpi">${COP(d.total)}</div></div><div class="card"><div class="small">Costo real por boli</div><div class="kpi">${COP(d.total/d.actual)}</div></div></div>`;
 }
 async function saveProduction(){
+ if(savingProduction)return;
  const d=getProductionData();if(d.error)return alert(d.error);if(!d.enough)return alert('Falta inventario.');
- const {data:pr,error}=await sb.from('productions').insert({user_id:user.id,recipe_id:d.r.id,nombre_receta:d.r.nombre,lotes:d.lots,bolis_sugeridos:d.suggested,bolis_reales:d.actual,costo_total:d.total,costo_por_boli:d.total/d.actual,estado:'ACTIVA'}).select().single();if(error)return alert(error.message);
- for(const c of d.cons){
-   const iv=invByProduct(c.p.id);
-   await sb.from('inventory').update({cantidad:Number(iv.cantidad)-c.qty,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('product_id',c.p.id);
-   await sb.from('inventory_movements').insert({user_id:user.id,product_id:c.p.id,tipo:c.type==='EXTRA'?'Extra producción':'Producción',cantidad:-c.qty,unidad:c.p.unidad_base,valor:c.cost,referencia_tipo:'PRODUCCION',referencia_id:pr.id,nota:d.r.nombre});
-   await sb.from('production_consumption').insert({production_id:pr.id,product_id:c.p.id,nombre_producto:c.p.nombre,cantidad:c.qty,unidad:c.p.unidad_base,costo:c.cost,tipo:c.type});
+ savingProduction=true;
+ const btn=document.getElementById('saveProductionBtn');if(btn){btn.disabled=true;btn.textContent='GUARDANDO...'}
+ try{
+   const {data:pr,error}=await sb.from('productions').insert({user_id:user.id,recipe_id:d.r.id,nombre_receta:d.r.nombre,lotes:d.lots,bolis_sugeridos:d.suggested,bolis_reales:d.actual,costo_total:d.total,costo_por_boli:d.total/d.actual,estado:'ACTIVA'}).select().single();
+   if(error)throw error;
+   for(const c of d.cons){
+     const iv=invByProduct(c.p.id);
+     const u=await sb.from('inventory').update({cantidad:Number(iv.cantidad)-c.qty,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('product_id',c.p.id);
+     if(u.error)throw u.error;
+     const m=await sb.from('inventory_movements').insert({user_id:user.id,product_id:c.p.id,tipo:c.type==='EXTRA'?'Extra producción':'Producción',cantidad:-c.qty,unidad:c.p.unidad_base,valor:c.cost,referencia_tipo:'PRODUCCION',referencia_id:pr.id,nota:d.r.nombre});
+     if(m.error)throw m.error;
+     const pc=await sb.from('production_consumption').insert({production_id:pr.id,product_id:c.p.id,nombre_producto:c.p.nombre,cantidad:c.qty,unidad:c.p.unidad_base,costo:c.cost,tipo:c.type});
+     if(pc.error)throw pc.error;
+   }
+   const old=finished.find(f=>f.recipe_id===d.r.id);
+   let fi;
+   if(old)fi=await sb.from('finished_inventory').update({cantidad:Number(old.cantidad)+d.actual,updated_at:new Date().toISOString()}).eq('id',old.id);
+   else fi=await sb.from('finished_inventory').insert({user_id:user.id,recipe_id:d.r.id,nombre_sabor:d.r.nombre,cantidad:d.actual});
+   if(fi.error)throw fi.error;
+   await sb.from('production_audit').insert({user_id:user.id,production_id:pr.id,accion:'CREACIÓN',detalle:`${d.actual} bolis agregados al inventario.`});
+   alert('Producción guardada.');
+   await loadAll();
+ }catch(e){
+   alert('No se pudo guardar la producción: '+(e?.message||e));
+ }finally{
+   savingProduction=false;
+   if(btn){btn.disabled=false;btn.textContent='GUARDAR PRODUCCIÓN'}
  }
- const old=finished.find(f=>f.recipe_id===d.r.id);
- if(old)await sb.from('finished_inventory').update({cantidad:Number(old.cantidad)+d.actual,updated_at:new Date().toISOString()}).eq('id',old.id);
- else await sb.from('finished_inventory').insert({user_id:user.id,recipe_id:d.r.id,nombre_sabor:d.r.nombre,cantidad:d.actual});
- await sb.from('production_audit').insert({user_id:user.id,production_id:pr.id,accion:'CREACIÓN',detalle:`${d.actual} bolis agregados al inventario.`});
- alert('Producción guardada.');await loadAll();
 }
-
 function setupDateFilters(){
  const now=new Date(),years=[...new Set(productions.map(p=>new Date(p.fecha).getFullYear()))];if(!years.includes(now.getFullYear()))years.push(now.getFullYear());years.sort((a,b)=>b-a);
  monthFilter.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i}">${new Date(2020,i,1).toLocaleString('es-CO',{month:'long'})}</option>`).join('');monthFilter.value=now.getMonth();
@@ -778,13 +794,40 @@ function renderFinished(){
    manualFinishedBody.innerHTML=finishedManualAdditions.map(x=>`<tr><td>${dt(x.fecha)}</td><td>${x.nombre_sabor}</td><td><b>+${x.cantidad}</b></td><td>${x.motivo||'Sin nota'}</td></tr>`).join('')||'<tr><td colspan="4">No hay entradas manuales.</td></tr>';
  }
  if(document.getElementById('lossesBody')){
-   lossesBody.innerHTML=finishedLosses.map(x=>`<tr><td>${dt(x.fecha)}</td><td>${x.nombre_sabor}</td><td>${x.cantidad}</td><td>${x.motivo||'Sin nota'}</td></tr>`).join('')||'<tr><td colspan="4">No hay pérdidas registradas.</td></tr>';
+   lossesBody.innerHTML=finishedLosses.map(x=>`<tr style="${x.revertida?'opacity:.6':''}"><td>${dt(x.fecha)}</td><td>${x.nombre_sabor}</td><td>${x.cantidad}</td><td>${x.motivo||'Sin nota'}</td><td><span class="status-pill ${x.revertida?'status-cancel':'status-active'}">${x.revertida?'DESHECHO':'ACTIVO'}</span></td><td>${x.revertida?'—':`<button class="btn secondary" onclick="openUndoFinishedLoss('${x.id}',${x.cantidad},'${String(x.nombre_sabor).replace(/'/g,'&#39;')}')">Deshacer retiro</button>`}</td></tr>`).join('')||'<tr><td colspan="6">No hay pérdidas registradas.</td></tr>';
  }
  const m=Number(monthFilter.value),y=Number(yearFilter.value);
  const list=productions.filter(p=>{const d=new Date(p.fecha);return d.getMonth()===m&&d.getFullYear()===y});
- productionHistory.innerHTML=list.map(p=>`<tr><td>${dt(p.fecha)}</td><td>${p.nombre_receta}</td><td>${fmt(p.lotes)}</td><td>${fmt(p.bolis_sugeridos)}</td><td>${fmt(p.bolis_reales)}</td><td>${COP(p.costo_total)}</td></tr>`).join('')||'<tr><td colspan="6">Sin producciones ese mes.</td></tr>';
+ productionHistory.innerHTML=list.map(p=>`<tr style="${p.estado==='ANULADA'?'opacity:.6':''}"><td>${dt(p.fecha)}</td><td>${p.nombre_receta}${p.anulada_motivo?`<br><small>${p.anulada_motivo}</small>`:''}</td><td>${fmt(p.lotes)}</td><td>${fmt(p.bolis_sugeridos)}</td><td>${fmt(p.bolis_reales)}</td><td>${COP(p.costo_total)}</td><td><span class="status-pill ${p.estado==='ANULADA'?'status-cancel':'status-active'}">${p.estado}</span></td><td>${p.estado==='ANULADA'?'—':`<button class="btn danger" onclick="openCancelProduction('${p.id}',${p.bolis_reales},'${String(p.nombre_receta).replace(/'/g,'&#39;')}')">Anular producción</button>`}</td></tr>`).join('')||'<tr><td colspan="8">Sin producciones ese mes.</td></tr>';
 }
 
+
+function openUndoFinishedLoss(id,qty,name){
+ showModal(`<h2>Deshacer retiro</h2>
+ <div class="msg ok">Esto devolverá <b>${qty} bolis de ${name}</b> al inventario de bolis. No tocará ingredientes.</div>
+ <div class="small">Úsalo cuando hayas marcado un retiro/pérdida por error.</div>
+ <label>Nota opcional</label><input id="undoLossReason" placeholder="Ej. Se retiraron por error al intentar anular producción">
+ <div class="toolbar"><button class="btn primary" onclick="undoFinishedLoss('${id}')">Deshacer retiro</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function undoFinishedLoss(id){
+ const reason=document.getElementById('undoLossReason')?.value||'';
+ const {error}=await sb.rpc('revertir_retiro_bolis',{p_loss_id:id,p_motivo:reason});
+ if(error)return alert(error.message);
+ closeModal();await loadAll();alert('Retiro deshecho. Los bolis volvieron al inventario.');
+}
+function openCancelProduction(id,qty,name){
+ showModal(`<h2>Anular producción</h2>
+ <div class="msg err"><b>${name} · ${qty} bolis</b><br>Esta acción devolverá al inventario todos los ingredientes consumidos por esta producción y quitará estos bolis del inventario terminado.</div>
+ <div class="small"><b>No uses “Retirar / pérdida” para esto.</b> Si ya retiraste los bolis por error, primero usa <b>Deshacer retiro</b> en el historial de pérdidas y después vuelve aquí.</div>
+ <label>Motivo</label><input id="cancelProductionReason" value="Producción registrada por error">
+ <div class="toolbar"><button class="btn danger" onclick="cancelProduction('${id}')">ANULAR Y DEVOLVER INGREDIENTES</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function cancelProduction(id){
+ const reason=document.getElementById('cancelProductionReason')?.value||'Producción registrada por error';
+ const {error}=await sb.rpc('anular_produccion',{p_production_id:id,p_motivo:reason});
+ if(error)return alert(error.message);
+ closeModal();await loadAll();alert('Producción anulada. Los ingredientes regresaron al inventario.');
+}
 function openManualFinishedAdd(){
  const opts=recipes.map(r=>`<option value="${r.id}">${r.nombre}</option>`).join('');
  showModal(`<h2>Agregar bolis hechos</h2>
