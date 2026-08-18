@@ -313,6 +313,11 @@ input,select{min-height:44px}
 
     <section id="inventario" class="section">
       <h1>Inventario</h1><div class="sub">Compras, daños, pérdidas y ajustes.</div>
+      <div class="card" style="margin-top:14px;max-width:360px">
+        <div class="small">Dinero actual en inventario</div>
+        <div class="kpi" id="inventoryCurrentValue">$0</div>
+        <div class="small">Valor de los ingredientes que tienes disponibles ahora.</div>
+      </div>
       <div class="toolbar"><button class="btn primary" onclick="openPurchase()">+ Registrar compra</button><button class="btn secondary" onclick="openAdjustment()">Daño / pérdida / ajuste</button></div>
       <div class="miniSearch"><span>⌕</span><input id="inventorySearch" type="search" placeholder="Buscar ingrediente..." oninput="renderInventory()"></div>
       <table><thead><tr><th>Producto</th><th>Existencia</th><th>Costo promedio</th><th>Valor</th></tr></thead><tbody id="inventoryBody"></tbody></table>
@@ -571,6 +576,8 @@ function renderProducts(){
 }
 
 function renderInventory(){
+ const totalInventoryValue=inventory.reduce((a,i)=>a+(Number(i.cantidad||0)*Number(i.costo_promedio||0)),0);
+ const valueLabel=document.getElementById('inventoryCurrentValue');if(valueLabel)valueLabel.textContent=COP(totalInventoryValue);
  const q=(document.getElementById('inventorySearch')?.value||'').trim().toLowerCase();
  const list=products.filter(p=>{
    const text=[p.nombre,p.unidad_base,p.categoria,p.marca].filter(Boolean).join(' ').toLowerCase();
