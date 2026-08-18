@@ -348,8 +348,10 @@ input,select{min-height:44px}
 
     <section id="bolis" class="section">
       <h1>Inventario de bolis</h1><div class="sub">Existencias terminadas por sabor y configuración de precios de BERTELITOS.</div>
+      <div class="toolbar"><button class="btn primary" onclick="openManualFinishedAdd()">+ Agregar bolis hechos</button></div>
       <h3>Inventario actual y precio de venta</h3>
-      <table><thead><tr><th>Sabor</th><th>Cantidad</th><th>Precio</th><th>Acciones</th></tr></thead><tbody id="finishedBody"></tbody></table><h3 style="margin-top:24px">Bolis retirados / pérdidas</h3><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="lossesBody"></tbody></table>
+      <table><thead><tr><th>Sabor</th><th>Cantidad</th><th>Precio</th><th>Acciones</th></tr></thead><tbody id="finishedBody"></tbody></table><h3 style="margin-top:24px">Entradas manuales</h3><div class="small">Bolis agregados sin descontar ingredientes.</div><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="manualFinishedBody"></tbody></table>
+      <h3 style="margin-top:24px">Bolis retirados / pérdidas</h3><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="lossesBody"></tbody></table>
       <h3 style="margin-top:24px">Producción por mes</h3>
       <div class="formgrid">
         <div><label>Mes</label><select id="monthFilter" onchange="renderFinished()"></select></div>
@@ -468,7 +470,7 @@ const SUPABASE_KEY='sb_publishable_TCNsMstb0cJiHGtxXF6kdA_gc05Hr8k';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let session=null,user=null;
-let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],businessSettings=null;
+let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],finishedManualAdditions=[],businessSettings=null;
 let extras=[],recipeDraft=null,saleDraft=[],quickCalculations=[],freeReceipts=[],quickCalcDraft=[],freeReceiptDraft=[];
 
 const COP=n=>'$'+Math.round(Number(n||0)).toLocaleString('es-CO');
@@ -522,7 +524,7 @@ async function enterApp(){
 }
 
 async function loadAll(){
- const [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs,qc,fr]=await Promise.all([
+ const [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,bs,qc,fr]=await Promise.all([
    sb.from('products').select('*').eq('activo',true).order('nombre'),
    sb.from('inventory').select('*'),
    sb.from('recipes').select('*').eq('activo',true).order('nombre'),
@@ -534,14 +536,15 @@ async function loadAll(){
    sb.from('sales').select('*').order('fecha',{ascending:false}).limit(1000),
    sb.from('sale_items').select('*').limit(5000),
    sb.from('finished_losses').select('*').order('fecha',{ascending:false}).limit(500),
+   sb.from('finished_manual_additions').select('*').order('fecha',{ascending:false}).limit(500),
    sb.from('business_settings').select('*').maybeSingle(),
    sb.from('quick_calculations').select('*').order('created_at',{ascending:false}),
    sb.from('free_receipts').select('*').order('fecha',{ascending:false})
  ]);
- for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,bs,qc,fr]) if(x.error){alert(x.error.message);return}
+ for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,bs,qc,fr]) if(x.error){alert(x.error.message);return}
  products=p.data||[];inventory=i.data||[];recipes=r.data||[];recipeIngredients=ri.data||[];
  movements=m.data||[];productions=pr.data||[];finished=f.data||[];finishedPrices=fp.data||[];
- sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];businessSettings=bs.data||null;quickCalculations=qc.data||[];freeReceipts=fr.data||[];
+ sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];finishedManualAdditions=fma.data||[];businessSettings=bs.data||null;quickCalculations=qc.data||[];freeReceipts=fr.data||[];
  renderAll();
 }
 
@@ -771,12 +774,36 @@ function renderFinished(){
  if(document.getElementById('productionFinishedBody')){
    productionFinishedBody.innerHTML=finished.map(f=>`<tr><td>${f.nombre_sabor}</td><td><b>${fmt(f.cantidad)}</b></td><td>${priceByRecipe(f.recipe_id)?.precio?COP(priceByRecipe(f.recipe_id).precio):'Sin precio'}</td></tr>`).join('')||'<tr><td colspan="3">Sin inventario terminado.</td></tr>';
  }
+ if(document.getElementById('manualFinishedBody')){
+   manualFinishedBody.innerHTML=finishedManualAdditions.map(x=>`<tr><td>${dt(x.fecha)}</td><td>${x.nombre_sabor}</td><td><b>+${x.cantidad}</b></td><td>${x.motivo||'Sin nota'}</td></tr>`).join('')||'<tr><td colspan="4">No hay entradas manuales.</td></tr>';
+ }
  if(document.getElementById('lossesBody')){
    lossesBody.innerHTML=finishedLosses.map(x=>`<tr><td>${dt(x.fecha)}</td><td>${x.nombre_sabor}</td><td>${x.cantidad}</td><td>${x.motivo||'Sin nota'}</td></tr>`).join('')||'<tr><td colspan="4">No hay pérdidas registradas.</td></tr>';
  }
  const m=Number(monthFilter.value),y=Number(yearFilter.value);
  const list=productions.filter(p=>{const d=new Date(p.fecha);return d.getMonth()===m&&d.getFullYear()===y});
  productionHistory.innerHTML=list.map(p=>`<tr><td>${dt(p.fecha)}</td><td>${p.nombre_receta}</td><td>${fmt(p.lotes)}</td><td>${fmt(p.bolis_sugeridos)}</td><td>${fmt(p.bolis_reales)}</td><td>${COP(p.costo_total)}</td></tr>`).join('')||'<tr><td colspan="6">Sin producciones ese mes.</td></tr>';
+}
+
+function openManualFinishedAdd(){
+ const opts=recipes.map(r=>`<option value="${r.id}">${r.nombre}</option>`).join('');
+ showModal(`<h2>Agregar bolis hechos</h2>
+ <div class="small">Esta entrada suma bolis terminados al inventario, pero <b>no descuenta ingredientes</b>.</div>
+ <div class="formgrid">
+   <div><label>Sabor / receta</label><select id="manualFinishedRecipe">${opts}</select></div>
+   <div><label>Cantidad de bolis</label><input id="manualFinishedQty" type="number" min="1" value="1"></div>
+   <div style="grid-column:1/-1"><label>Motivo / nota</label><input id="manualFinishedReason" placeholder="Ej. Sobrante de crema de evento"></div>
+ </div>
+ <div class="toolbar"><button class="btn primary" onclick="saveManualFinishedAdd()">Agregar al inventario</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function saveManualFinishedAdd(){
+ const recipeId=document.getElementById('manualFinishedRecipe')?.value;
+ const qty=Number(document.getElementById('manualFinishedQty')?.value||0);
+ const reason=document.getElementById('manualFinishedReason')?.value||'';
+ if(!recipeId||qty<=0)return alert('Selecciona un sabor y una cantidad válida.');
+ const {error}=await sb.rpc('registrar_bolis_manual',{p_recipe_id:recipeId,p_cantidad:Math.floor(qty),p_motivo:reason});
+ if(error)return alert('No se pudieron agregar los bolis: '+error.message);
+ closeModal();await loadAll();alert('Bolis agregados al inventario sin afectar ingredientes.');
 }
 function openFinishedLoss(recipeId,name,available){
  showModal(`<h2>Retirar bolis del inventario</h2><div class="small"><b>${name}</b> · ${available} disponibles. Úsalo para bolis dañados, perdidos, regalados, vencidos o cualquier salida que no sea una venta.</div><div class="formgrid"><div><label>Cantidad a retirar</label><input id="lossQty" type="number" min="1" max="${available}" value="1"></div><div><label>Motivo</label><input id="lossReason" placeholder="Ej. Se dañaron en congelador"></div></div><div class="toolbar"><button class="btn danger" onclick="saveFinishedLoss('${recipeId}')">Registrar salida</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
@@ -1329,7 +1356,7 @@ async function saveBusinessSettings(){
  closeModal();await loadAll();
 }
 async function exportCloudBackup(){
- const payload={app:'BERTELITOS · Bolis Control Online',version:'1.9',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,businessSettings}};
+ const payload={app:'BERTELITOS · Bolis Control Online',version:'1.9',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,finishedManualAdditions,businessSettings}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Bolis_Control_Online_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);msg(backupMsg,'Respaldo generado. Revisa Descargas.');
 }
 
