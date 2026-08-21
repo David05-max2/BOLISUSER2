@@ -355,7 +355,7 @@ input,select{min-height:44px}
       <h1>Inventario de bolis</h1><div class="sub">Existencias terminadas por sabor y configuración de precios de BERTELITOS.</div>
       <div class="toolbar"><button class="btn primary" onclick="openManualFinishedAdd()">+ Agregar bolis hechos</button></div>
       <h3>Inventario actual y precio de venta</h3>
-      <table><thead><tr><th>Sabor</th><th>Cantidad</th><th>Precio</th><th>Acciones</th></tr></thead><tbody id="finishedBody"></tbody></table><h3 style="margin-top:24px">Entradas manuales</h3><div class="small">Bolis agregados sin descontar ingredientes.</div><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="manualFinishedBody"></tbody></table>
+      <table><thead><tr><th>Sabor</th><th>Cantidad</th><th>Costo por boli</th><th>Precio venta</th><th>Ganancia estimada</th><th>Acciones</th></tr></thead><tbody id="finishedBody"></tbody></table><h3 style="margin-top:24px">Entradas manuales</h3><div class="small">Bolis agregados sin descontar ingredientes.</div><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="manualFinishedBody"></tbody></table>
       <h3 style="margin-top:24px">Bolis retirados / pérdidas</h3><table><thead><tr><th>Fecha</th><th>Sabor</th><th>Cantidad</th><th>Motivo</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="lossesBody"></tbody></table>
       <h3 style="margin-top:24px">Producción por mes</h3>
       <div class="formgrid">
@@ -788,12 +788,27 @@ function setupSalesDateFilters(){
  saleMonthFilter.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i}">${new Date(2020,i,1).toLocaleString('es-CO',{month:'long'})}</option>`).join('');saleMonthFilter.value=now.getMonth();
  saleYearFilter.innerHTML=years.map(y=>`<option>${y}</option>`).join('');saleYearFilter.value=now.getFullYear();
 }
+function latestProductionCost(recipeId){
+ const list=productions
+   .filter(p=>p.recipe_id===recipeId && p.estado==='ACTIVA' && Number(p.costo_por_boli||0)>0)
+   .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+ return list.length?Number(list[0].costo_por_boli||0):0;
+}
 function renderFinished(){
  const rows=finished.map(f=>{
-   const price=priceByRecipe(f.recipe_id)?.precio||0;
-   return `<tr><td>${f.nombre_sabor}</td><td><b>${fmt(f.cantidad)}</b></td><td>${price?COP(price):'<span class="bad">Sin precio</span>'}</td><td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="openPrice('${f.recipe_id}','${String(f.nombre_sabor).replace(/'/g,"&#39;")}',${Number(price)})">Precio</button><button class="btn danger" onclick="openFinishedLoss('${f.recipe_id}','${String(f.nombre_sabor).replace(/'/g,"&#39;")}',${Number(f.cantidad)})">Retirar / pérdida</button></div></td></tr>`;
+   const price=Number(priceByRecipe(f.recipe_id)?.precio||0);
+   const cost=latestProductionCost(f.recipe_id);
+   const gain=price&&cost?price-cost:0;
+   return `<tr>
+     <td>${f.nombre_sabor}</td>
+     <td><b>${fmt(f.cantidad)}</b></td>
+     <td>${cost?`<b>${COP(cost)}</b><br><small>última producción</small>`:'<span class="small">Sin costo registrado</span>'}</td>
+     <td>${price?COP(price):'<span class="bad">Sin precio</span>'}</td>
+     <td>${price&&cost?`<b>${COP(gain)}</b><br><small>${fmt((gain/price)*100)}% margen</small>`:'—'}</td>
+     <td><div class="toolbar" style="margin:0"><button class="btn secondary" onclick="openPrice('${f.recipe_id}','${String(f.nombre_sabor).replace(/'/g,"&#39;")}',${Number(price)})">Precio</button><button class="btn danger" onclick="openFinishedLoss('${f.recipe_id}','${String(f.nombre_sabor).replace(/'/g,"&#39;")}',${Number(f.cantidad)})">Retirar / pérdida</button></div></td>
+   </tr>`;
  }).join('');
- finishedBody.innerHTML=rows||'<tr><td colspan="4">Todavía no hay bolis terminados.</td></tr>';
+ finishedBody.innerHTML=rows||'<tr><td colspan="6">Todavía no hay bolis terminados.</td></tr>';
  if(document.getElementById('productionFinishedBody')){
    productionFinishedBody.innerHTML=finished.map(f=>`<tr><td>${f.nombre_sabor}</td><td><b>${fmt(f.cantidad)}</b></td><td>${priceByRecipe(f.recipe_id)?.precio?COP(priceByRecipe(f.recipe_id).precio):'Sin precio'}</td></tr>`).join('')||'<tr><td colspan="3">Sin inventario terminado.</td></tr>';
  }
