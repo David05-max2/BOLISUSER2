@@ -234,6 +234,13 @@ input,select{min-height:44px}
  padding:9px 0!important;min-height:38px;width:100%;outline:none;
 }
 
+
+.financeTabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.financeTabs button{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:10px;font-weight:800}
+.financeTabs button.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+.financePanel{display:none;margin-top:14px}
+.financePanel.active{display:block}
+
 </style>
 </head>
 <body>
@@ -380,16 +387,44 @@ input,select{min-height:44px}
       </div>
       <div class="card" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
-          <div><h3 style="margin:0">Resumen financiero del mes</h3><div class="small">Inversión, dinero recibido e inventario.</div></div>
+          <div><h3 style="margin:0">Resumen financiero del mes</h3><div class="small">Separado por ventas normales, recibos libres y totales.</div></div>
           <button class="btn secondary" onclick="openMonthlyInvestmentDetail()">Ver detalle de insumos</button>
         </div>
-        <div class="grid" style="margin-top:14px">
-          <div><div class="small">Venía del mes anterior</div><div class="kpi" id="mOpeningInventory">$0</div></div>
-          <div><div class="small">Invertido este mes</div><div class="kpi" id="mPurchases">$0</div></div>
-          <div><div class="small">Ventas cobradas</div><div class="kpi" id="mCollected">$0</div></div>
-          <div><div class="small">Inventario restante</div><div class="kpi" id="mClosingInventory">$0</div></div>
-          <div><div class="small">Efectivo recibido</div><div class="kpi" id="mCash">$0</div></div>
-          <div><div class="small">Transferencias</div><div class="kpi" id="mTransfer">$0</div></div>
+
+        <div class="financeTabs">
+          <button id="financeTabNormal" class="active" onclick="showFinanceTab('normal')">Ventas normales</button>
+          <button id="financeTabFree" onclick="showFinanceTab('free')">Recibos libres</button>
+          <button id="financeTabTotal" onclick="showFinanceTab('total')">Totales</button>
+        </div>
+
+        <div id="financePanelNormal" class="financePanel active">
+          <div class="grid">
+            <div><div class="small">Ventas cobradas</div><div class="kpi" id="mCollected">$0</div></div>
+            <div><div class="small">Efectivo</div><div class="kpi" id="mCash">$0</div></div>
+            <div><div class="small">Transferencias</div><div class="kpi" id="mTransfer">$0</div></div>
+            <div><div class="small">Costo real de envíos</div><div class="kpi" id="mNormalShippingCost">$0</div></div>
+          </div>
+        </div>
+
+        <div id="financePanelFree" class="financePanel">
+          <div class="grid">
+            <div><div class="small">Recibos libres cobrados</div><div class="kpi" id="mFreeReceipts">$0</div></div>
+            <div><div class="small">Efectivo</div><div class="kpi" id="mFreeCash">$0</div></div>
+            <div><div class="small">Transferencias</div><div class="kpi" id="mFreeTransfer">$0</div></div>
+            <div><div class="small">Cantidad de recibos</div><div class="kpi" id="mFreeCount">0</div></div>
+          </div>
+        </div>
+
+        <div id="financePanelTotal" class="financePanel">
+          <div class="toolbar" style="margin-top:0"><button class="btn primary" onclick="openMonthlyExpense()">+ Registrar gasto</button></div>
+          <div class="grid">
+            <div><div class="small">EFECTIVO DISPONIBLE</div><div class="kpi" id="mTotalCash">$0</div><div class="small" id="mCashFormula">Entró $0 − gastaste $0</div></div>
+            <div><div class="small">TRANSFERENCIAS DISPONIBLES</div><div class="kpi" id="mTotalTransfer">$0</div><div class="small" id="mTransferFormula">Entró $0 − gastaste $0</div></div>
+            <div><div class="small">GASTOS DEL MES</div><div class="kpi" id="mExpensesTotal">$0</div></div>
+            <div><div class="small">DINERO DISPONIBLE TOTAL</div><div class="kpi" id="mAvailableTotal">$0</div><div class="small" id="mAvailableFormula">$0 + $0</div></div>
+          </div>
+          <h3 style="margin-top:20px">Gastos registrados</h3>
+          <div class="tableScroll"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Origen</th><th>Método</th><th>Valor</th><th>Nota</th><th></th></tr></thead><tbody id="monthlyExpensesBody"></tbody></table></div>
         </div>
       </div>
       <div style="overflow:auto;margin-top:14px">
@@ -451,11 +486,17 @@ input,select{min-height:44px}
 
     <section id="reciboslibres" class="section">
       <h1>Recibos libres</h1>
-      <div class="sub">Comprobantes independientes. Se guardan, pero no descuentan inventario ni entran en ganancias.</div>
+      <div class="sub">Comprobantes independientes. Se guardan y ahora también forman parte del resumen de dinero recibido.</div>
       <div class="toolbar"><button class="btn primary" onclick="openFreeReceipt()">+ Nuevo recibo libre</button></div>
       <div class="formgrid">
         <div><label>Mes</label><select id="freeReceiptMonth" onchange="renderFreeReceipts()"></select></div>
         <div><label>Año</label><select id="freeReceiptYear" onchange="renderFreeReceipts()"></select></div>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        <div class="card"><div class="small">Recibos libres del mes</div><div class="kpi" id="frCount">0</div></div>
+        <div class="card"><div class="small">Efectivo · recibos libres</div><div class="kpi" id="frCash">$0</div></div>
+        <div class="card"><div class="small">Transferencias · recibos libres</div><div class="kpi" id="frTransfer">$0</div></div>
+        <div class="card"><div class="small">Total · recibos libres</div><div class="kpi" id="frTotal">$0</div></div>
       </div>
       <div style="overflow:auto;margin-top:14px"><table><thead><tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="freeReceiptBody"></tbody></table></div>
     </section>
@@ -475,7 +516,7 @@ const SUPABASE_KEY='sb_publishable_TCNsMstb0cJiHGtxXF6kdA_gc05Hr8k';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let session=null,user=null;
-let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],finishedManualAdditions=[],businessSettings=null;
+let products=[],inventory=[],recipes=[],recipeIngredients=[],movements=[],productions=[],finished=[],finishedPrices=[],sales=[],saleItems=[],finishedLosses=[],finishedManualAdditions=[],monthlyExpenses=[],businessSettings=null;
 let extras=[],recipeDraft=null,saleDraft=[],quickCalculations=[],freeReceipts=[],quickCalcDraft=[],freeReceiptDraft=[],savingProduction=false;
 
 const COP=n=>'$'+Math.round(Number(n||0)).toLocaleString('es-CO');
@@ -529,7 +570,7 @@ async function enterApp(){
 }
 
 async function loadAll(){
- const [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,bs,qc,fr]=await Promise.all([
+ const [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,me,bs,qc,fr]=await Promise.all([
    sb.from('products').select('*').eq('activo',true).order('nombre'),
    sb.from('inventory').select('*'),
    sb.from('recipes').select('*').eq('activo',true).order('nombre'),
@@ -542,14 +583,15 @@ async function loadAll(){
    sb.from('sale_items').select('*').limit(5000),
    sb.from('finished_losses').select('*').order('fecha',{ascending:false}).limit(500),
    sb.from('finished_manual_additions').select('*').order('fecha',{ascending:false}).limit(500),
+   sb.from('monthly_expenses').select('*').order('fecha',{ascending:false}).limit(2000),
    sb.from('business_settings').select('*').maybeSingle(),
    sb.from('quick_calculations').select('*').order('created_at',{ascending:false}),
    sb.from('free_receipts').select('*').order('fecha',{ascending:false})
  ]);
- for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,bs,qc,fr]) if(x.error){alert(x.error.message);return}
+ for(const x of [p,i,r,ri,m,pr,f,fp,sa,si,fl,fma,me,bs,qc,fr]) if(x.error){alert(x.error.message);return}
  products=p.data||[];inventory=i.data||[];recipes=r.data||[];recipeIngredients=ri.data||[];
  movements=m.data||[];productions=pr.data||[];finished=f.data||[];finishedPrices=fp.data||[];
- sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];finishedManualAdditions=fma.data||[];businessSettings=bs.data||null;quickCalculations=qc.data||[];freeReceipts=fr.data||[];
+ sales=sa.data||[];saleItems=si.data||[];finishedLosses=fl.data||[];finishedManualAdditions=fma.data||[];monthlyExpenses=me.data||[];businessSettings=bs.data||null;quickCalculations=qc.data||[];freeReceipts=fr.data||[];
  renderAll();
 }
 
@@ -653,6 +695,7 @@ function openPurchase(){
  <div><label>Cuánto trae cada unidad</label><input id="buyContent" type="number" min="0" step=".01" value="1" oninput="purchasePreview()"></div>
  <div><label>Medida</label><select id="buyMeasure" onchange="purchasePreview()"></select></div>
  <div><label>Precio por unidad comprada (COP)</label><input id="buyPrice" type="number" min="0" oninput="purchasePreview()"></div>
+ <div><label>Cómo pagaste</label><select id="buyPaymentMethod" onchange="purchasePreview()"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option></select></div>
  <div><label>Nota</label><input id="buyNote"></div></div><div id="buyPreview" class="msg ok"></div>
  <div class="toolbar"><button class="btn primary" onclick="savePurchase()">Guardar compra</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
  purchaseProductChanged();
@@ -662,20 +705,89 @@ function purchasePreview(){
  const p=productById(buyProduct.value);if(!p)return;
  const count=Number(buyCount.value||0),base=toBase(Number(buyContent.value||0),buyMeasure.value,p.unidad_base),enter=count*base,paid=count*Number(buyPrice.value||0);
  const old=invByProduct(p.id)||{cantidad:0,costo_promedio:0};const newAvg=(Number(old.cantidad)+enter)?((Number(old.cantidad)*Number(old.costo_promedio))+paid)/(Number(old.cantidad)+enter):0;
- buyPreview.innerHTML=`Entrará <b>${fmt(enter)} ${p.unidad_base}</b> · Total <b>${COP(paid)}</b> · Nuevo promedio <b>${COP(newAvg)}/${p.unidad_base}</b>`;
+ const method=document.getElementById('buyPaymentMethod')?.value||'EFECTIVO';
+ buyPreview.innerHTML=`Entrará <b>${fmt(enter)} ${p.unidad_base}</b> · Total <b>${COP(paid)}</b> · Pago <b>${method==='TRANSFERENCIA'?'Transferencia':'Efectivo'}</b> · Nuevo promedio <b>${COP(newAvg)}/${p.unidad_base}</b>`;
 }
 async function savePurchase(){
- const p=productById(buyProduct.value),count=Number(buyCount.value),content=Number(buyContent.value),baseEach=toBase(content,buyMeasure.value,p.unidad_base),enter=count*baseEach,total=count*Number(buyPrice.value);
- if(count<=0||content<=0||total<0)return alert('Revisa los datos.');
- const old=invByProduct(p.id)||{cantidad:0,costo_promedio:0};const newQty=Number(old.cantidad)+enter,newAvg=((Number(old.cantidad)*Number(old.costo_promedio))+total)/newQty;
- const {error:e1}=await sb.from('purchases').insert({user_id:user.id,product_id:p.id,cantidad_comprada:count,contenido_por_unidad:content,unidad_compra:buyMeasure.value,costo_total:total,cantidad_base_total:enter,costo_por_unidad_base:total/enter,nota:buyNote.value});
- if(e1)return alert(e1.message);
- const {error:e2}=await sb.from('inventory').upsert({user_id:user.id,product_id:p.id,cantidad:newQty,costo_promedio:newAvg,updated_at:new Date().toISOString()},{onConflict:'user_id,product_id'});
- if(e2)return alert(e2.message);
- await sb.from('inventory_movements').insert({user_id:user.id,product_id:p.id,tipo:'Compra',cantidad:enter,unidad:p.unidad_base,valor:total,nota:buyNote.value});
- closeModal();await loadAll();
-}
+ const productId=document.getElementById('buyProduct')?.value;
+ const p=productById(productId);
+ if(!p)return alert('Selecciona un producto.');
 
+ const count=Number(document.getElementById('buyCount')?.value||0);
+ const content=Number(document.getElementById('buyContent')?.value||0);
+ const measure=document.getElementById('buyMeasure')?.value;
+ const unitPrice=Number(document.getElementById('buyPrice')?.value||0);
+ const note=document.getElementById('buyNote')?.value||'';
+ const method=document.getElementById('buyPaymentMethod')?.value||'EFECTIVO';
+
+ const baseEach=toBase(content,measure,p.unidad_base);
+ const enter=count*baseEach;
+ const total=count*unitPrice;
+
+ if(count<=0||content<=0||total<=0)return alert('Revisa cantidad, contenido y precio.');
+
+ const old=invByProduct(p.id)||{cantidad:0,costo_promedio:0};
+ const newQty=Number(old.cantidad)+enter;
+ const newAvg=((Number(old.cantidad)*Number(old.costo_promedio))+total)/newQty;
+
+ const cash=method==='EFECTIVO'?total:0;
+ const transfer=method==='TRANSFERENCIA'?total:0;
+
+ const {data:purchase,error:e1}=await sb.from('purchases').insert({
+   user_id:user.id,
+   product_id:p.id,
+   cantidad_comprada:count,
+   contenido_por_unidad:content,
+   unidad_compra:measure,
+   costo_total:total,
+   cantidad_base_total:enter,
+   costo_por_unidad_base:total/enter,
+   nota:note,
+   metodo_pago:method,
+   monto_efectivo:cash,
+   monto_transferencia:transfer
+ }).select().single();
+ if(e1)return alert('No se pudo guardar la compra: '+e1.message);
+
+ const {error:e2}=await sb.from('inventory').upsert({
+   user_id:user.id,
+   product_id:p.id,
+   cantidad:newQty,
+   costo_promedio:newAvg,
+   updated_at:new Date().toISOString()
+ },{onConflict:'user_id,product_id'});
+ if(e2)return alert('La compra se guardó, pero falló la actualización del inventario: '+e2.message);
+
+ const {error:e3}=await sb.from('inventory_movements').insert({
+   user_id:user.id,
+   product_id:p.id,
+   tipo:'Compra',
+   cantidad:enter,
+   unidad:p.unidad_base,
+   valor:total,
+   referencia_tipo:'COMPRA',
+   referencia_id:purchase.id,
+   nota:note
+ });
+ if(e3)return alert('Inventario actualizado, pero falló el movimiento: '+e3.message);
+
+ const {error:e4}=await sb.from('monthly_expenses').insert({
+   user_id:user.id,
+   concepto:`Compra inventario · ${p.nombre}`,
+   valor:total,
+   metodo_pago:method,
+   fecha:new Date().toISOString(),
+   nota:note||`${fmt(enter)} ${p.unidad_base}`,
+   source_type:'INVENTORY_PURCHASE',
+   source_id:purchase.id
+ });
+ if(e4)return alert('Compra e inventario guardados, pero no se pudo registrar el gasto: '+e4.message);
+
+ closeModal();
+ await loadAll();
+ showFinanceTab('total');
+ alert('Compra registrada en inventario y también en Gastos registrados.');
+}
 function openAdjustment(){
  showModal(`<h2>Ajuste de inventario</h2><div class="formgrid">
  <div><label>Producto</label><select id="adjProduct" onchange="adjProductChanged()">${productOptions()}</select></div>
@@ -1017,21 +1129,161 @@ function monthlyProductFinance(){
  });
  return Object.values(by);
 }
+
+function showFinanceTab(tab){
+ const tabs=['normal','free','total'];
+ tabs.forEach(t=>{
+   const cap=t.charAt(0).toUpperCase()+t.slice(1);
+   document.getElementById('financePanel'+cap)?.classList.toggle('active',t===tab);
+   document.getElementById('financeTab'+cap)?.classList.toggle('active',t===tab);
+ });
+}
+
+function monthlyExpensesForSelectedMonth(){
+ const {start,end}=salesMonthRange();
+ return monthlyExpenses.filter(x=>x.estado!=='ANULADO'&&new Date(x.fecha)>=start&&new Date(x.fecha)<end);
+}
+function openMonthlyExpense(){
+ showModal(`<h2>Registrar gasto del mes</h2>
+ <div class="small">Para gastos que no sean compras de inventario. Las compras registradas desde Inventario entran aquí automáticamente.</div>
+ <div class="formgrid">
+   <div><label>Concepto</label><input id="expenseConcept" placeholder="Ej. Fresa"></div>
+   <div><label>Valor</label><input id="expenseValue" type="number" min="0" placeholder="6000"></div>
+   <div><label>Método de pago</label><select id="expenseMethod"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option></select></div>
+   <div><label>Fecha</label><input id="expenseDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+   <div style="grid-column:1/-1"><label>Nota</label><input id="expenseNote" placeholder="Opcional"></div>
+ </div>
+ <div class="toolbar"><button class="btn primary" onclick="saveMonthlyExpense()">Guardar gasto</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function saveMonthlyExpense(){
+ const concepto=document.getElementById('expenseConcept')?.value.trim()||'';
+ const valor=Number(document.getElementById('expenseValue')?.value||0);
+ const metodo=document.getElementById('expenseMethod')?.value||'EFECTIVO';
+ const fecha=document.getElementById('expenseDate')?.value;
+ const nota=document.getElementById('expenseNote')?.value.trim()||'';
+ if(!concepto||valor<=0)return alert('Escribe un concepto y un valor válido.');
+ const iso=fecha?new Date(fecha+'T12:00:00').toISOString():new Date().toISOString();
+ const {error}=await sb.from('monthly_expenses').insert({user_id:user.id,concepto,valor,metodo_pago:metodo,fecha:iso,nota,source_type:'MANUAL'});
+ if(error)return alert('No se pudo guardar el gasto: '+error.message);
+ closeModal();await loadAll();showFinanceTab('total');
+}
+async function cancelMonthlyExpense(id){
+ const exp=monthlyExpenses.find(x=>x.id===id);
+ if(!exp)return alert('Gasto no encontrado.');
+ const isPurchase=exp.source_type==='INVENTORY_PURCHASE';
+ const msg=isPurchase
+   ? 'Esta compra está ligada al inventario. Al anularla se quitará del inventario la cantidad comprada y el dinero volverá al método de pago. Si ya consumiste parte, el sistema bloqueará la anulación.'
+   : 'Al anular este gasto, el dinero volverá al total disponible.';
+ showModal(`<h2>${isPurchase?'Anular compra de inventario':'Anular gasto'}</h2>
+ <div class="msg ${isPurchase?'err':'ok'}">${msg}</div>
+ <div class="small"><b>${esc(exp.concepto)}</b> · ${COP(exp.valor)} · ${exp.metodo_pago==='TRANSFERENCIA'?'Transferencia':'Efectivo'}</div>
+ <label>Motivo</label><input id="cancelExpenseReason" value="Registro por error">
+ <div class="toolbar"><button class="btn danger" onclick="confirmCancelMonthlyExpense('${id}')">${isPurchase?'ANULAR COMPRA Y REVERTIR INVENTARIO':'ANULAR GASTO'}</button><button class="btn secondary" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function confirmCancelMonthlyExpense(id){
+ const reason=document.getElementById('cancelExpenseReason')?.value||'Registro por error';
+ const {error}=await sb.rpc('anular_gasto_o_compra',{p_expense_id:id,p_motivo:reason});
+ if(error)return alert(error.message);
+ closeModal();await loadAll();showFinanceTab('total');
+ alert('Registro anulado correctamente.');
+}
+function renderMonthlyExpenses(){
+ const body=document.getElementById('monthlyExpensesBody');if(!body)return;
+ const rows=monthlyExpensesForSelectedMonth();
+ body.innerHTML=rows.map(x=>{
+   const purchaseExpense=x.source_type==='INVENTORY_PURCHASE';
+   return `<tr>
+     <td>${dt(x.fecha)}</td>
+     <td><b>${esc(x.concepto)}</b></td>
+     <td>${purchaseExpense?'<span class="status-pill status-active">Compra inventario</span>':'<span class="status-pill">Gasto manual</span>'}</td>
+     <td>${x.metodo_pago==='TRANSFERENCIA'?'Transferencia':'Efectivo'}</td>
+     <td>${COP(x.valor)}</td>
+     <td>${esc(x.nota||'')}</td>
+     <td><button class="btn danger" onclick="cancelMonthlyExpense('${x.id}')">Anular</button></td>
+   </tr>`;
+ }).join('')||'<tr><td colspan="7">No hay gastos registrados este mes.</td></tr>';
+}
+function paymentBreakdown(record){
+ const total=Number(record?.total||0);
+ const method=String(record?.metodo_pago||'').toUpperCase();
+
+ if(method==='EFECTIVO'){
+   return {cash:total,transfer:0};
+ }
+ if(method==='TRANSFERENCIA'){
+   return {cash:0,transfer:total};
+ }
+ if(method==='MIXTO'){
+   const cash=Number(record?.monto_efectivo||0);
+   const transfer=Number(record?.monto_transferencia||0);
+   return {cash,transfer};
+ }
+
+ /* Registros antiguos sin método: usamos montos guardados si existen. */
+ const cash=Number(record?.monto_efectivo||0);
+ const transfer=Number(record?.monto_transferencia||0);
+ return {cash,transfer};
+}
 function renderMonthlyFinance(){
  const rows=monthlyProductFinance(),{start,end}=salesMonthRange();
- const active=sales.filter(s=>s.estado==='ACTIVA'&&new Date(s.fecha)>=start&&new Date(s.fecha)<end);
+
+ const activeSales=sales.filter(x=>x.estado==='ACTIVA'&&new Date(x.fecha)>=start&&new Date(x.fecha)<end);
+ const activeFree=freeReceipts.filter(x=>x.estado!=='ANULADO'&&new Date(x.fecha)>=start&&new Date(x.fecha)<end);
+
  const opening=rows.reduce((a,x)=>a+Math.max(0,x.openingValue),0);
  const purchases=rows.reduce((a,x)=>a+x.purchaseValue,0);
  const closing=rows.reduce((a,x)=>a+Math.max(0,x.closingValue),0);
- const collected=active.reduce((a,x)=>a+Number(x.total||0),0);
- const cash=active.reduce((a,x)=>a+Number(x.monto_efectivo||0),0);
- const transfer=active.reduce((a,x)=>a+Number(x.monto_transferencia||0),0);
- if(document.getElementById('mOpeningInventory'))mOpeningInventory.textContent=COP(opening);
- if(document.getElementById('mPurchases'))mPurchases.textContent=COP(purchases);
- if(document.getElementById('mCollected'))mCollected.textContent=COP(collected);
- if(document.getElementById('mClosingInventory'))mClosingInventory.textContent=COP(closing);
- if(document.getElementById('mCash'))mCash.textContent=COP(cash);
- if(document.getElementById('mTransfer'))mTransfer.textContent=COP(transfer);
+
+ const normalIncome=activeSales.reduce((a,x)=>a+Number(x.total||0),0);
+ const freeIncome=activeFree.reduce((a,x)=>a+Number(x.total||0),0);
+ const totalIncome=normalIncome+freeIncome;
+
+ const normalCash=activeSales.reduce((a,x)=>a+paymentBreakdown(x).cash,0);
+ const normalTransfer=activeSales.reduce((a,x)=>a+paymentBreakdown(x).transfer,0);
+ const freeCash=activeFree.reduce((a,x)=>a+paymentBreakdown(x).cash,0);
+ const freeTransfer=activeFree.reduce((a,x)=>a+paymentBreakdown(x).transfer,0);
+
+ const totalCash=normalCash+freeCash;
+ const totalTransfer=normalTransfer+freeTransfer;
+
+ const monthExpenses=monthlyExpensesForSelectedMonth();
+ const cashExpenses=monthExpenses.filter(x=>x.metodo_pago==='EFECTIVO').reduce((a,x)=>a+Number(x.valor||0),0);
+ const transferExpenses=monthExpenses.filter(x=>x.metodo_pago==='TRANSFERENCIA').reduce((a,x)=>a+Number(x.valor||0),0);
+ const expensesTotal=cashExpenses+transferExpenses;
+ const availableCash=totalCash-cashExpenses;
+ const availableTransfer=totalTransfer-transferExpenses;
+ const availableTotal=availableCash+availableTransfer;
+
+ const shippingCosts=activeSales.reduce((a,x)=>a+Number(x.costo_envio||0),0);
+ const freeCount=activeFree.length;
+ const spent=shippingCosts+expensesTotal;
+ const netCashFlow=totalIncome-spent;
+
+ const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=COP(val)};
+
+ set('mOpeningInventory',opening);
+ set('mPurchases',purchases);
+ set('mCollected',normalIncome);
+ set('mFreeReceipts',freeIncome);
+ set('mFreeCount',freeCount);
+ set('mNormalShippingCost',shippingCosts);
+ set('mTotalIncome',totalIncome);
+ set('mSpent',spent);
+ set('mClosingInventory',closing);
+
+ set('mCash',normalCash);
+ set('mTransfer',normalTransfer);
+ set('mFreeCash',freeCash);
+ set('mFreeTransfer',freeTransfer);
+ set('mTotalCash',availableCash);
+ set('mTotalTransfer',availableTransfer);
+ set('mExpensesTotal',expensesTotal);
+ set('mAvailableTotal',availableTotal);
+ const cashFormula=document.getElementById('mCashFormula');if(cashFormula)cashFormula.textContent='Entró '+COP(totalCash)+' − gastaste '+COP(cashExpenses);
+ const transferFormula=document.getElementById('mTransferFormula');if(transferFormula)transferFormula.textContent='Entró '+COP(totalTransfer)+' − gastaste '+COP(transferExpenses);
+ const availableFormula=document.getElementById('mAvailableFormula');if(availableFormula)availableFormula.textContent=COP(availableCash)+' + '+COP(availableTransfer);
+ set('mNetCashFlow',netCashFlow);
+ renderMonthlyExpenses();
 }
 function openMonthlyInvestmentDetail(){
  const rows=monthlyProductFinance().filter(x=>x.openingQty||x.purchaseQty||x.usedQty||x.closingQty);
@@ -1193,10 +1445,32 @@ function setupFreeReceiptFilters(){
 }
 function renderFreeReceipts(){
  const body=document.getElementById('freeReceiptBody');if(!body)return;
- const m=Number(document.getElementById('freeReceiptMonth')?.value||new Date().getMonth()+1),y=Number(document.getElementById('freeReceiptYear')?.value||new Date().getFullYear());
+ const m=Number(document.getElementById('freeReceiptMonth')?.value||new Date().getMonth()+1),
+       y=Number(document.getElementById('freeReceiptYear')?.value||new Date().getFullYear());
+
  const rows=freeReceipts.filter(r=>{const d=new Date(r.fecha);return d.getMonth()+1===m&&d.getFullYear()===y});
- body.innerHTML=rows.map(r=>`<tr><td>${dt(r.fecha)}</td><td>#L${String(r.numero_recibo).padStart(5,'0')}</td><td>${esc(r.cliente_nombre||'')}</td><td>${COP(r.total)}</td><td>${esc(r.estado)}</td>
- <td><button class="btn secondary" onclick="viewFreeReceipt('${r.id}')">Ver</button> <button class="btn secondary" onclick="openFreeReceipt('${r.id}')">Editar</button> <button class="btn secondary" onclick="shareFreeReceiptImage('${r.id}')">WhatsApp imagen</button> ${r.estado==='ACTIVO'?`<button class="btn danger" onclick="cancelFreeReceipt('${r.id}')">Anular</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6">No hay recibos libres en este mes.</td></tr>';
+ const active=rows.filter(r=>r.estado!=='ANULADO');
+
+ const cash=active.reduce((a,r)=>a+paymentBreakdown(r).cash,0);
+ const transfer=active.reduce((a,r)=>a+paymentBreakdown(r).transfer,0);
+ const total=active.reduce((a,r)=>a+Number(r.total||0),0);
+
+ const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val};
+ set('frCount',active.length);
+ set('frCash',COP(cash));
+ set('frTransfer',COP(transfer));
+ set('frTotal',COP(total));
+
+ body.innerHTML=rows.map(r=>`<tr style="${r.estado==='ANULADO'?'opacity:.6':''}">
+ <td>${dt(r.fecha)}</td>
+ <td>#L${String(r.numero_recibo).padStart(5,'0')}</td>
+ <td>${esc(r.cliente_nombre||'')}</td>
+ <td>${COP(r.total)}</td>
+ <td>${esc(r.estado)}</td>
+ <td><button class="btn secondary" onclick="viewFreeReceipt('${r.id}')">Ver</button> <button class="btn secondary" onclick="openFreeReceipt('${r.id}')">Editar</button> <button class="btn secondary" onclick="shareFreeReceiptImage('${r.id}')">WhatsApp imagen</button> ${r.estado==='ACTIVO'?`<button class="btn danger" onclick="cancelFreeReceipt('${r.id}')">Anular</button>`:''}</td>
+ </tr>`).join('')||'<tr><td colspan="6">No hay recibos libres en este mes.</td></tr>';
+
+ renderMonthlyFinance();
 }
 function openFreeReceipt(id=''){
  const r=freeReceipts.find(x=>x.id===id);freeReceiptDraft=(r?.items||[]).map(x=>({...x}));
@@ -1421,7 +1695,7 @@ async function saveBusinessSettings(){
  closeModal();await loadAll();
 }
 async function exportCloudBackup(){
- const payload={app:'BERTELITOS · Bolis Control Online',version:'1.9',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,finishedManualAdditions,businessSettings}};
+ const payload={app:'BERTELITOS · Bolis Control Online',version:'1.9',exportedAt:new Date().toISOString(),data:{products,inventory,recipes,recipeIngredients,movements,productions,finished,finishedPrices,sales,saleItems,finishedLosses,finishedManualAdditions,monthlyExpenses,businessSettings}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Bolis_Control_Online_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);msg(backupMsg,'Respaldo generado. Revisa Descargas.');
 }
 
